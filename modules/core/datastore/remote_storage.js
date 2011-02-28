@@ -43,7 +43,9 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
         if(obj.model.state === M.STATE_NEW) {   /* if the model is new we need to make a create request, if not new then we make an update request */
 
             dataResult = config.create.map(obj.model.record);
-
+            if(obj.showLoader) {
+                    M.LoaderView.show();
+            }
             this.remoteQuery('create', config.url + config.create.url(obj.model.get('ID')), config.create.httpMethod, dataResult, obj, null);
 
         } else { // make an update request
@@ -51,6 +53,10 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
             dataResult = config.update.map(obj.model.record);
 
             var updateUrl = config.url + config.update.url(obj.model.get('ID'));
+
+            if(obj.showLoader) {
+                M.LoaderView.show();
+            }
 
             this.remoteQuery('update', updateUrl, config.update.httpMethod, dataResult, obj, function(xhr) {
                   xhr.setRequestHeader("X-Http-Method-Override", config.update.httpMethod);
@@ -64,6 +70,10 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
         var delUrl = config.del.url(obj.model.get('ID'));
         delUrl = config.url + delUrl;
 
+        if(obj.showLoader) {
+            M.LoaderView.show();
+        }
+
         this.remoteQuery('delete', delUrl, config.del.httpMethod, null, obj,  function(xhr) {
             xhr.setRequestHeader("X-Http-Method-Override", config.del.httpMethod);
         });
@@ -74,6 +84,10 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
 
         var readUrl = obj.ID ? config.read.url.one(obj.ID) : config.read.url.all();
         readUrl = config.url + readUrl;
+
+        if(obj.showLoader) {
+            M.LoaderView.show();
+        }
 
         this.remoteQuery('read', readUrl, config.read.httpMethod, null, obj);
 
@@ -107,6 +121,10 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
             contentType: 'application/JSON',
             data: data ? data : null,
             onSuccess: function(data, msg, xhr) {
+
+                if(obj.showLoader) {
+                    M.LoaderView.hide();
+                }
 
                 /*
                 * delete from record manager if delete request was made.
@@ -146,7 +164,9 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
                 }
             },
             onError: function(xhr, msg) {
-
+                if(obj.showLoader) {
+                    M.LoaderView.hide();
+                }
                 var err = M.Error.extend({
                     code: M.ERR_CONNECTION,
                     msg: msg

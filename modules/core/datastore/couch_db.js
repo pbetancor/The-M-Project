@@ -65,7 +65,6 @@ M.DataProviderCouchDb = M.DataProvider.extend(
         var url = this.buildUrl('/_all_dbs');  // http://mycouchdb.com/_all_bs returns all databases of myCouchDB
 
         var that = this;
-
         if(obj.showLoader) {
             M.LoaderView.show();
         }
@@ -191,7 +190,6 @@ M.DataProviderCouchDb = M.DataProvider.extend(
             if(obj.showLoader) {
                     M.LoaderView.hide();
             }
-
             this.performRequest('PUT', url, YES, dataValue,
 
                 function(xhr) {    /* beforeSend set HTTP header to PUT */
