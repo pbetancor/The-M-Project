@@ -21,9 +21,7 @@ m_require('core/utility/logger.js');
  *
  * 0-99:    general errors
  *
- * 
- *
- * 100-199:
+ * 100-199: Model and Validation errors
  *
  * 200-299:   WebSQL errors
  *
@@ -35,6 +33,12 @@ m_require('core/utility/logger.js');
  * M.ERR_UNDEFINED                      0       The reason for the error could not be clarified.
  * M.ERR_CONNECTION                     1       A connection to an external service could not be established
  *
+ * M.ERR_VALIDATION_PRESENCE            100     A model record failed validation due to a property is not set but required to be.
+ * M.ERR_VALIDATION_URL                 101     A model record failed validation due to a property does not represent a valid URL but is required to do so.
+ * M.ERR_VALIDATION_PHONE               102     A model record failed validation due to a property does not represent a phone number but is required to do so.
+ * M.ERR_VALIDATION_NUMBER              103     A model record failed validation due to a property is not of type number or represents a number but is required to do so.
+ * M.ERR_VALIDATION_NOTMINUS            104     A model record failed validation due to a property contains a minus value but it is required to do not.
+ * M.ERR_VALIDATION_EMAIL               105     A model record failed validation due to a property does not represent a valid eMail but is required to do so.
  *
  * M.ERR_WEBSQL_UNKNOWN                 200     The transaction failed for reasons unrelated to the database itself and not covered by any other error code.
  * M.ERR_WEBSQL_DATABASE                201     The statement failed for database reasons not covered by any other error code.
@@ -70,6 +74,54 @@ M.ERR_UNDEFINED = 0;
  */
 M.ERR_CONNECTION = 1;
 
+/**
+ * A model record failed validation due to a property is not set but required to be.
+ *
+ * @type Number
+ */
+M.ERR_VALIDATION_PRESENCE = 100;
+
+/**
+ * A model record failed validation due to a property does not represent a valid URL but is required to do so.
+ *
+ * @type Number
+ */
+M.ERR_VALIDATION_URL = 101;
+
+/**
+ * A model record failed validation due to a property does not represent a phone number but is required to do so.
+ *
+ * @type Number
+ */
+M.ERR_VALIDATION_PHONE = 102;
+
+/**
+ * A model record failed validation due to a property is not of type number or represents a number but is required to do so.
+ *
+ * @type Number
+ */
+M.ERR_VALIDATION_NUMBER = 103;
+
+/**
+ * A model record failed validation due to a property contains a minus value but it is required to do not.
+ *
+ * @type Number
+ */
+M.ERR_VALIDATION_NOTMINUS = 104;
+
+/**
+ * A model record failed validation due to a property does not represent a valid eMail but is required to do so.
+ *
+ * @type Number
+ */
+M.ERR_VALIDATION_EMAIL = 105;
+
+/**
+ * A model record failed validation due to a property does not represent a valid eMail but is required to do so.
+ *
+ * @type Number
+ */
+M.ERR_VALIDATION_DATE = 106;
 
 /* WebSQL Error Codes (see e.g. http://www.w3.org/TR/webdatabase/) */
 /**
