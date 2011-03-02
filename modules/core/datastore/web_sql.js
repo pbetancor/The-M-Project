@@ -20,7 +20,7 @@ m_require('core/datastore/data_provider.js');
  * @extends M.DataProvider
  */
 M.DataProviderWebSql = M.DataProvider.extend(
-/** @scope M.WebSqlProvider.prototype */ {
+/** @scope M.DataProviderWebSql.prototype */ {
 
     /**
      * The type of this object.
@@ -115,7 +115,7 @@ M.DataProviderWebSql = M.DataProvider.extend(
     /**
      * Saves a model in the database. Constructs the sql query from the model record. Prepares an INSERT or UPDATE depending on the state
      * of the model. If M.STATE_NEW then prepares an INSERT, if M.STATE_VALID then prepares an UPDATE. The operation itself
-     * is done by {@link M.WebSqlProvider#performOp} that is called
+     * is done by {@link M.DataProviderWebSql#performOp} that is called
      *
      * @param {Object} obj The param obj, includes:
      * * onSuccess callback

@@ -23,7 +23,7 @@ m_require('core/datastore/data_provider.js');
  * @extends M.DataProvider
  */
 M.DataProviderLocalStorage = M.DataProvider.extend(
-/** @scope M.LocalStorageProvider.prototype */ {
+/** @scope M.DataProviderLocalStorage.prototype */ {
 
     /**
      * The type of this object.

@@ -243,7 +243,8 @@ M.ERR_COUCHDB_DBEXISTS = 302;
  */
 M.ERR_COUCHDB_DOCNOTFOUND = 303;
 
-M.Error = M.Object.extend({
+M.Error = M.Object.extend(
+/** @scope M.Error.prototype */ {
     code: '',
     msg: '',
     errObj: null

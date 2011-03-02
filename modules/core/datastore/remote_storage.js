@@ -18,7 +18,7 @@ m_require('core/datastore/data_provider.js');
  * @extends M.DataProvider
  */
 M.DataProviderRemoteStorage = M.DataProvider.extend(
-/** @scope M.RemoteStorageProvider.prototype */ {
+/** @scope M.DataProviderRemoteStorage.prototype */ {
 
     /**
      * The type of this object.
@@ -34,6 +34,11 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
 
     /* CRUD methods */
 
+    /**
+     * Makes a save request: Uses the CREATE config if model record is newly created and UPDATE config already exists.
+     * Delegates to {@link M.DataProviderRemoteStorage#remoteQuery}
+     * @param {Object} obj The parameter obj. Contains model record.
+     */
     save: function(obj) {
 
         var config = this.config[obj.model.name];
@@ -65,6 +70,11 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
 
     },
 
+    /**
+     * Makes a delete request. 
+     * Delegates to {@link M.DataProviderRemoteStorage#remoteQuery}
+     * @param {Object} obj The parameter obj. Contains model record.
+     */
     del: function(obj) {
         var config = this.config[obj.model.name];
         var delUrl = config.del.url(obj.model.get('ID'));
@@ -79,6 +89,11 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
         });
     },
 
+    /**
+     * Makes a find/read request. Distinguishes between finding a single model record and readAll.
+     * Delegates to {@link M.DataProviderRemoteStorage#remoteQuery}
+     * @param {Object} obj The parameter obj. Contains model record.
+     */
     find: function(obj) {
         var config = this.config[obj.model.name];
 
@@ -93,6 +108,14 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
 
     },
 
+    /**
+     * Creates models from result. if data is not an array, one record is created, if it is an array, records for all data objects are created.
+     * Created record(s) is/are pushed to result array and passed to callback.
+     * @param {Object|Array} The data response from the server. Can be one data object or an array of data objects
+     * @param {Function} callback Callback function
+     * @param {Object} obj Param obj
+     * @private 
+     */
     createModelsFromResult: function(data, callback, obj) {
         var result = [];
         var config = this.config[obj.model.name];
@@ -110,13 +133,23 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
         callback(result);
     },
 
-    remoteQuery: function(opType, url, type, data, obj, beforeSend) {
+    /**
+     *
+     * @param {String} opType The type of operation that is performed: create, read, delete
+     * @param {String} url The request URL
+     * @param {String} method The HTTP method
+     * @param {Object|String} data The HTTP-Body
+     * @param {Object} obj The param obj
+     * @param {Function} beforeSend Function that is called before request is sent
+     * @private
+     */
+    remoteQuery: function(opType, url, method, data, obj, beforeSend) {
         var that = this;
         var config = this.config[obj.model.name];
 
         M.Request.init({
             url: url,
-            method: type,
+            method: method,
             isJSON: YES,
             contentType: 'application/JSON',
             data: data ? data : null,
@@ -188,7 +221,7 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
 
     /**
      * creates a new data provider instance with the passed configuration parameters
-     * @param obj
+     * @param {Object} obj The param obj. 
      */
     configure: function(obj) {
         console.log('configure() called.');
