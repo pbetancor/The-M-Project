@@ -1,6 +1,6 @@
 // ==========================================================================
 // Project:   The M-Project - Mobile HTML5 Application Framework
-// Copyright: ©2010 M-Way Solutions GmbH. All rights reserved.
+// Copyright: ï¿½2010 M-Way Solutions GmbH. All rights reserved.
 // Creator:   Dominik
 // Date:      26.10.2010
 // License:   Dual licensed under the MIT or GPL Version 2 licenses.
@@ -52,6 +52,8 @@ M.META_UPDATED_AT = '_updatedAt';
  * constant that defines name of m_id column name
  */
 M.META_M_ID = '_m_id';
+
+M.META_REMOTE_ID = '_r_ID';
 
 /**
  * Overwrites clear() of LocalStorage to clear only key-value pairs belonging to the application. If the previously existing,

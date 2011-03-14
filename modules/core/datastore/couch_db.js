@@ -132,7 +132,7 @@ M.DataProviderCouchDb = M.DataProvider.extend(
                     M.LoaderView.hide();
                 }
 
-                M.Logger.log('Connection error...', M.ERROR)
+                M.Logger.log('Connection error...', M.ERR);
                 var err = M.Error.extend({
                     code: M.ERR_CONNECTION,
                     msg: msg
@@ -148,13 +148,13 @@ M.DataProviderCouchDb = M.DataProvider.extend(
      * @param {Object} error The error object that is passed to error callback
      */
     errorCallback: function(obj, error) {
-        M.Logger.log('Error: ' + error.msg, M.ERROR);
+        M.Logger.log('Error: ' + error.msg, M.ERR);
         if(obj && obj.onError) {
             if(obj.onError.target && obj.onError.action) {
-                obj.onError = this.bindToCaller(obj.onError.target, obj.onError.target[obj.onError.action], obj, error);
+                obj.onError = this.bindToCaller(obj.onError.target, obj.onError.target[obj.onError.action], error, obj, this);
                 obj.onError();
             } else if(typeof(obj.onError) === 'function') {
-                obj.onError(error);
+                obj.onError(error, obj, this);
             }
 
         }
@@ -265,10 +265,10 @@ M.DataProviderCouchDb = M.DataProvider.extend(
                         obj.model.set('rev', data.rev);
                         if(obj.onSuccess.target && obj.onSuccess.action) {
                             // returns obj.model
-                            obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], obj.model);
+                            obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], null, obj, this);
                             obj.onSuccess();
                         } else if(obj.onSuccess && typeof(obj.onSuccess) === 'function') {
-                            obj.onSuccess(obj.model);
+                            obj.onSuccess(null, obj, this);
                         }
                     }
                 },
@@ -319,10 +319,10 @@ M.DataProviderCouchDb = M.DataProvider.extend(
                          obj.model.set('rev', data.rev);
                         if(obj.onSuccess.target && obj.onSuccess.action) {
                             /* returns saved model. */
-                            obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], obj.model);
+                            obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], null, obj, this);
                             obj.onSuccess();
                         } else if(obj.onSuccess && typeof(obj.onSuccess) === 'function') {
-                            obj.onSuccess(obj.model);
+                            obj.onSuccess(null, obj, this);
                         }
                     }
                 },
@@ -393,10 +393,10 @@ M.DataProviderCouchDb = M.DataProvider.extend(
                     if(!data.error) {
                         var result = that.createRecOfDoc(obj, data);
                         if(obj.onSuccess && obj.onSuccess.target && obj.onSuccess.action) {
-                            obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], result);
+                            obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], result, obj, this);
                             obj.onSuccess();
                         } else if(obj.onSuccess && typeof(obj.onSuccess) === 'function') {
-                            obj.onSuccess(result);
+                            obj.onSuccess(result, obj, this);
                         }
                         return YES;
                     } else {
@@ -544,10 +544,10 @@ M.DataProviderCouchDb = M.DataProvider.extend(
                      * callback. therefor we now put result into an array (so we have an array inside an array) and result as a whole is now passed as the first
                      * value to the callback.
                      *  */
-                    obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], [result]);
+                    obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], [result], obj, this);
                     obj.onSuccess();
                 } else if(obj.onSuccess && typeof(obj.onSuccess) === 'function') {
-                    obj.onSuccess(result);
+                    obj.onSuccess(result, obj, this);
                 }
                 // make onSuccessCallback
                 return result;
@@ -617,10 +617,10 @@ M.DataProviderCouchDb = M.DataProvider.extend(
                     });
 
                     if(obj.onSuccess && obj.onSuccess.target && obj.onSuccess.action) {
-                        obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], [result]);
+                        obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], [result], obj, this);
                         obj.onSuccess();
                     } else if(obj.onSuccess && typeof(obj.onSuccess) === 'function') {
-                        obj.onSuccess(result);
+                        obj.onSuccess(result, obj, this);
                     }
                 }
             },
@@ -679,10 +679,10 @@ M.DataProviderCouchDb = M.DataProvider.extend(
 
                 if(data.ok) {
                     if(obj.onSuccess && obj.onSuccess.target && obj.onSuccess.action) {
-                        obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action]);
+                        obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], null, obj, this);
                         obj.onSuccess();
                     } else if(obj.onSuccess && typeof(obj.onSuccess) === 'function') {
-                        obj.onSuccess();
+                        obj.onSuccess(null, obj, this);
                     }
                     return YES;
                 }

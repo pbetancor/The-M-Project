@@ -233,7 +233,7 @@ M.View = M.Object.extend(
                 if(this[childViews[i]]) {
                     this.html += this[childViews[i]].render();
                 } else {
-                    M.Logger.log(childViews[i] + ' is undefinded. Can\' call render() of an undefinded object', M.ERROR);
+                    M.Logger.log(childViews[i] + ' is undefinded. Can\' call render() of an undefinded object', M.ERR);
                 }
             }
             return this.html;
@@ -305,7 +305,7 @@ M.View = M.Object.extend(
             return;
         } else {
             var bindingPathString = bindingPath.join('.');
-            M.Logger.log('bindingPath \'' + bindingPathString + '\' not valid', M.Error);
+            M.Logger.log('bindingPath \'' + bindingPathString + '\' not valid', M.ERR);
         }
     },
 
@@ -326,7 +326,7 @@ M.View = M.Object.extend(
             this.isObserver = YES;
         } else {
             var bindingPathString = bindingPath.join('.');
-            M.Logger.log('bindingPath \'' + bindingPathString + '\' not valid', M.Error);
+            M.Logger.log('bindingPath \'' + bindingPathString + '\' not valid', M.ERR);
         }
     },
 

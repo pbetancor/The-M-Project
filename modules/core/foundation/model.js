@@ -16,6 +16,7 @@ M.STATE_LOCALCHANGED = 'state_localchange';
 M.STATE_VALID = 'state_valid';
 M.STATE_INVALID = 'state_invalid';
 M.STATE_DELETED = 'state_deleted';
+M.STATE_FAIL = 'state_fail';
 
 m_require('core/foundation/model_registry.js');
 
@@ -109,6 +110,10 @@ M.Model = M.Object.extend(
      */
     dataProvider: null,
 
+    pre: null,
+
+    post: null,
+
     /**
      * Creates a new record of the model, means an instance of the model based on the blueprint.
      * You pass the object's specific attributes to it as an object.
@@ -174,8 +179,11 @@ M.Model = M.Object.extend(
             name: obj.__name__,
             dataProvider: dp,
             recordManager: {},
-            usesValidation: obj.usesValidation === null || obj.usesValidation === undefined ? this.usesValidation : obj.usesValidation
+            usesValidation: obj.usesValidation === null || obj.usesValidation === undefined ? this.usesValidation : obj.usesValidation,
+            pre: obj.pre && typeof(obj.pre) === 'function' ? obj.pre : null,
+            post: obj.post && typeof(obj.post) === 'function' ? obj.post : null
         });
+        
         delete obj.__name__;
         delete obj.usesValidation;
 
@@ -189,6 +197,9 @@ M.Model = M.Object.extend(
 
         /* add ID, _createdAt and _modifiedAt properties in meta for timestamps  */
         model.__meta['ID'] = this.attr('Integer', {
+            isRequired:NO
+        });
+        model.__meta[M.META_REMOTE_ID] = this.attr('Integer', {
             isRequired:NO
         });
         model.__meta[M.META_CREATED_AT] = this.attr('String', { // could be 'Date', too
@@ -209,7 +220,7 @@ M.Model = M.Object.extend(
 
         /* if dataprovider is WebSqlProvider, create table for this model and add ID ModelAttribute Object to __meta */
         if(model.dataProvider.type === 'M.DataProviderWebSql') {
-            model.dataProvider.init({model: model, onError:function(err){M.Logger.log(err, M.ERROR);}}, function() {});
+            model.dataProvider.init({model: model, onError:function(err){M.Logger.log(err, M.ERR);}}, function() {});
             model.dataProvider.isInitialized = YES;
         }
 
@@ -409,7 +420,7 @@ M.Model = M.Object.extend(
      */
     find: function(obj){
         if(!this.dataProvider) {
-            M.Logger.log('No data provider given.', M.ERROR);
+            M.Logger.log('No data provider given.', M.ERR);
         }
         obj = obj ? obj : {};
         /* check if the record list shall be cleared (default) before new found model records are appended to the record list */
@@ -419,7 +430,7 @@ M.Model = M.Object.extend(
             this.recordManager.removeAll();
         }
         if(!this.dataProvider) {
-            M.Logger.log('No data provider given.', M.ERROR);
+            M.Logger.log('No data provider given.', M.ERR);
         }
 
         /* extends the given obj with self as model property in obj */
@@ -436,8 +447,14 @@ M.Model = M.Object.extend(
      * which does not necessarily indicate whether the operation was successful, because the operation is asynchronous, means the operation's result is not predictable.
      */
     save: function(obj) {
+
+       var op = this.state === M.STATE_NEW ? 'create' : 'update';
+        if( !this.evalPreCondition(op) ) {
+            return NO;
+        }
+
         if(!this.dataProvider) {
-            M.Logger.log('No data provider given.', M.ERROR);
+            M.Logger.log('No data provider given.', M.ERR);
         }
         obj = obj ? obj: {};
         if(!this.m_id) {
@@ -465,7 +482,7 @@ M.Model = M.Object.extend(
 
     bulkImport: function(obj){
         if(!this.dataProvider) {
-            M.Logger.log('No data provider given.', M.ERROR);
+            M.Logger.log('No data provider given.', M.ERR);
         }
         if(this.dataProvider.type !== 'M.DataProviderWebSql') {
             var err = M.Error.extend({
@@ -478,7 +495,7 @@ M.Model = M.Object.extend(
             } else if (typeof(obj.onError) === 'function') {
                 obj.onError(err);
             } else {
-                M.Logger.log('Target and action in onError not defined.', M.ERROR);
+                M.Logger.log('Target and action in onError not defined.', M.ERR);
             }
             return NO;
         }
@@ -493,8 +510,12 @@ M.Model = M.Object.extend(
      * are used, e.g. WebSQL provider the real result comes asynchronous and here just the result of the del() function call of the @link M.WebSqlProvider is used.
      */
     del: function(obj) {
+        if( !this.evalPreCondition('delete') ) {
+            return NO;
+        }
+
         if(!this.dataProvider) {
-            M.Logger.log('No data provider given.', M.ERROR);
+            M.Logger.log('No data provider given.', M.ERR);
         }
         obj = obj ? obj : {};
         if(!this.m_id) {
@@ -507,6 +528,17 @@ M.Model = M.Object.extend(
             return YES
         }
 
+        /* call post operation */
+        this.postOperation('delete');
+    },
+
+    /**
+     *
+     */
+    evalPreCondition: function(op) {
+        if(this.pre && typeof(this.pre) === 'function') {
+            return this.pre(this, op);
+        }
     },
 
     /**
@@ -559,7 +591,7 @@ M.Model = M.Object.extend(
                         that.setReference(result, that, curRec.prop, cb);
                     },
                     onError: function(err) {
-                        M.Logger.log('Error: ' + err, M.ERROR);
+                        M.Logger.log('Error: ' + err, M.ERR);
                     }
                 });
 

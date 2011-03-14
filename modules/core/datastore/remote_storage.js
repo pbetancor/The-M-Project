@@ -130,7 +130,7 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
         } else if(typeof(data) === 'object') {
             result.push(obj.model.createRecord($.extend(config.read.map(data), {state: M.STATE_VALID})));
         }
-        callback(result);
+        callback(result, obj, this);
     },
 
     /**
@@ -182,7 +182,7 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
                 */
                 if(obj.onSuccess) {
                     if(obj.onSuccess.target && obj.onSuccess.action) {
-                        obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], [data]);
+                        obj.onSuccess = that.bindToCaller(obj.onSuccess.target, obj.onSuccess.target[obj.onSuccess.action], [data], obj, this);
                         if(opType === 'read') {
                             that.createModelsFromResult(data, obj.onSuccess, obj);
                         } else {
@@ -206,10 +206,10 @@ M.DataProviderRemoteStorage = M.DataProvider.extend(
                 });
 
                 if(obj.onError && typeof(obj.onError) === 'function') {
-                    obj.onError(err);
+                    obj.onError(err, obj, this);
                 }
                 if(obj.onError && obj.onError.target && obj.onError.action) {
-                    obj.onError = this.bindToCaller(obj.onError.target, obj.onError.target[obj.onError.action], err);
+                    obj.onError = this.bindToCaller(obj.onError.target, obj.onError.target[obj.onError.action], err, obj, this);
                     obj.onError();
                 } else if (typeof(obj.onError) !== 'function') {
                     M.Logger.log('No error callback given.', M.WARN);

@@ -393,7 +393,7 @@ M.Date = M.Object.extend(
      */
     millisecondsFromDate: function(milliseconds) {
         if(!this.date) {
-            M.Logger.log('no date specified!', M.ERROR);
+            M.Logger.log('no date specified!', M.ERR);
         }
 
         var outputDate = new Date(Date.parse(this.date) + milliseconds);
@@ -440,9 +440,9 @@ M.Date = M.Object.extend(
                     break;
             }
         } else if(firstDateInMilliseconds) {
-            M.Logger.log('invalid date passed.', M.ERROR);
+            M.Logger.log('invalid date passed.', M.ERR);
         } else {
-            M.Logger.log('invalid date.', M.ERROR);
+            M.Logger.log('invalid date.', M.ERR);
         }
     },
 

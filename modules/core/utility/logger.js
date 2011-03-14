@@ -22,7 +22,7 @@ M.DEBUG = 0;
  *
  * @type Number
  */
-M.ERROR = 1;
+M.ERR = 1;
 
 /**
  * A constant value for logging level: warning.

@@ -40,6 +40,8 @@ m_require('core/utility/logger.js');
  * M.ERR_VALIDATION_NOTMINUS            104     A model record failed validation due to a property contains a minus value but it is required to do not.
  * M.ERR_VALIDATION_EMAIL               105     A model record failed validation due to a property does not represent a valid eMail but is required to do so.
  *
+ * M.ERR_MODEL_PROVIDER_NOT_SET         120     A data provider has not been set.
+ *
  * M.ERR_WEBSQL_UNKNOWN                 200     The transaction failed for reasons unrelated to the database itself and not covered by any other error code.
  * M.ERR_WEBSQL_DATABASE                201     The statement failed for database reasons not covered by any other error code.
  * M.ERR_WEBSQL_VERSION                 202     The operation failed because the actual database version was not what it should be. For example, a statement found that the actual database version no longer matched the expected version of the Database or DatabaseSync object, or the Database.changeVersion() or DatabaseSync.changeVersion() methods were passed a version that doesn't match the actual database version.
@@ -55,6 +57,9 @@ m_require('core/utility/logger.js');
  * M.ERR_COUCHDB_DBNOTFOUND             301     The provided database could not be found.
  * M.ERR_COUCHDB_DBEXISTS               302     The db already exists and therefor cannot be created again.
  * M.ERR_COUCHDB_DOCNOTFOUND            303     No document was found for the provided ID in the database.
+ *
+ *
+ *
  *
  * @extends M.Object
 */
@@ -122,6 +127,14 @@ M.ERR_VALIDATION_EMAIL = 105;
  * @type Number
  */
 M.ERR_VALIDATION_DATE = 106;
+
+/**
+ * A Data Provider was not set for a model.
+ *
+ * @type Number
+ */
+M.ERR_MODEL_PROVIDER_NOT_SET = 120;
+
 
 /* WebSQL Error Codes (see e.g. http://www.w3.org/TR/webdatabase/) */
 /**
