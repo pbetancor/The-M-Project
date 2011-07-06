@@ -18,7 +18,7 @@ M.STATE_VALID = 'state_valid';
 M.STATE_INVALID = 'state_invalid';
 M.STATE_DELETED = 'state_deleted';
 
-m_require('core/foundation/model_registry.js');
+m_require('core/data/model_registry.js');
 
 /*
     TODO: make model customizable regarding performance killing features. means configurable activation of certain features:
@@ -130,18 +130,19 @@ M.Model = M.Object.extend(
 
         /* set timestamps if new */
         if(rec.state === M.STATE_NEW) {
-            rec.record[M.META_CREATED_AT] = M.Date.now().format('yyyy/mm/dd HH:MM:ss');
-            rec.record[M.META_UPDATED_AT] = M.Date.now().format('yyyy/mm/dd HH:MM:ss');
+            rec.record[M.Application.getConfig('timeStampCreated')] = +new Date();//M.Date.now().format('yyyy/mm/dd HH:MM:ss');
+            rec.record[M.Application.getConfig('timeStampUpdated')] = +new Date();//M.Date.now().format('yyyy/mm/dd HH:MM:ss');
         }
 
         for(var i in rec.record) {
 
-            if(i === 'ID' || i === M.META_CREATED_AT || i === M.META_UPDATED_AT) {
+            if(i === 'ID' || i === M.Application.getConfig('timeStampCreated') || i === M.Application.getConfig('timeStampUpdated')) {
                 continue;
             }
 
             /* if record contains properties that are not part of __meta (means that are not defined in the model blueprint) delete them */
             if(!rec.__meta.hasOwnProperty(i)) {
+                M.Logger.log('Model ' + this.name + ' has no property called ' + i, M.WARN);
                 delete rec.record[i];
                 continue;
             }
@@ -157,7 +158,7 @@ M.Model = M.Object.extend(
             }
         }
 
-        this.recordManager.add(rec);
+        //this.recordManager.add(rec);
         return rec;
     },
 
@@ -169,12 +170,10 @@ M.Model = M.Object.extend(
      * @param {Object} dp The data provider to use, e. g. M.LocalStorageProvider
      * @returns {Object} The model blueprint: acts as blueprint to all records created with @link M.Model#createRecord
      */
-    create: function(obj, dp) {
+    create: function(obj) {
         var model = M.Model.extend({
             __meta: {},
             name: obj.__name__,
-            dataProvider: dp,
-            recordManager: {},
             usesValidation: obj.usesValidation === null || obj.usesValidation === undefined ? this.usesValidation : obj.usesValidation
         });
         delete obj.__name__;
@@ -192,15 +191,15 @@ M.Model = M.Object.extend(
         model.__meta['ID'] = this.attr('Integer', {
             isRequired:NO
         });
-        model.__meta[M.META_CREATED_AT] = this.attr('String', { // could be 'Date', too
+        model.__meta[M.Application.getConfig('timeStampCreated')] = this.attr('String', { // could be 'Date', too
             isRequired:YES
         });
-        model.__meta[M.META_UPDATED_AT] = this.attr('String', { // could be 'Date', too
+        model.__meta[M.Application.getConfig('timeStampUpdated')] = this.attr('String', { // could be 'Date', too
             isRequired:YES
         });
 
         /* CouchDB documents have a rev property for managing versions*/
-        if(model.dataProvider.type === 'M.DataProviderCouchDb') {
+        /*if(model.dataProvider.type === 'M.DataProviderCouchDb') {
             model.__meta['rev'] = this.attr('String', {
                 isRequired:NO
             });
@@ -208,11 +207,11 @@ M.Model = M.Object.extend(
 
         model.recordManager = M.RecordManager.extend({records:[]});
 
-        /* if dataprovider is WebSqlProvider, create table for this model and add ID ModelAttribute Object to __meta */
-        if(model.dataProvider.type === 'M.DataProviderWebSql') {
+         if dataprovider is WebSqlProvider, create table for this model and add ID ModelAttribute Object to __meta */
+        /*if(model.dataProvider.type === 'M.DataProviderWebSql') {
             model.dataProvider.init({model: model, onError:function(err){M.Logger.log(err, M.ERR);}}, function() {});
             model.dataProvider.isInitialized = YES;
-        }
+        }*/
 
         M.ModelRegistry.register(model.name);
 
@@ -221,7 +220,7 @@ M.Model = M.Object.extend(
 
         /* Re-set the just registered model's id, if there is a value stored */
         /* Model Registry stores the current id of a model type into localStorage */
-        var m_id = localStorage.getItem(M.LOCAL_STORAGE_PREFIX + M.Application.name + M.LOCAL_STORAGE_SUFFIX + model.name);
+        var m_id = localStorage.getItem(M.Application.getConfig('keyPrefix') + M.Application.name + M.Application.getConfig('keySuffix') + model.name);
         if(m_id) {
             M.ModelRegistry.setId(model.name, parseInt(m_id));
         }
@@ -344,7 +343,7 @@ M.Model = M.Object.extend(
             this.record[propName] = val;
             this.__meta[propName].isUpdated = YES;
             /* mark record as updated with new timestamp*/
-            this.record[M.META_UPDATED_AT] = M.Date.now().format('yyyy/mm/dd HH:MM:ss');
+            this.record[M.Application.getConfig('timeStampUpdated')] = M.Date.now().format('yyyy/mm/dd HH:MM:ss');
         }
     },
 
@@ -408,6 +407,7 @@ M.Model = M.Object.extend(
      * @returns {Boolean|Object} Depends on data provider used. When WebSQL used, a boolean is returned, the find result is returned asynchronously,
      * because the call itself is asynchronous. If LocalStorage is used, the result of the query is returned.
      */
+    // MOVE TO STORE
     find: function(obj){
         if(!this.dataProvider) {
             M.Logger.log('No data provider given.', M.ERR);
@@ -436,6 +436,7 @@ M.Model = M.Object.extend(
      * When WebSQL is used, the result of the save operation returns asynchronously. The result then is just the standard result returned by the web sql provider's save method
      * which does not necessarily indicate whether the operation was successful, because the operation is asynchronous, means the operation's result is not predictable.
      */
+    // MOVE TO STORE
     save: function(obj) {
         if(!this.dataProvider) {
             M.Logger.log('No data provider given.', M.ERR);
@@ -464,6 +465,7 @@ M.Model = M.Object.extend(
     },
 
 
+    // MOVE TO STORE
     bulkImport: function(obj){
         if(!this.dataProvider) {
             M.Logger.log('No data provider given.', M.ERR);
@@ -493,6 +495,7 @@ M.Model = M.Object.extend(
      * @returns {Boolean} Indicating whether deletion was successful or not (only with synchronous data providers, e.g. LocalStorage). When asynchronous data providers
      * are used, e.g. WebSQL provider the real result comes asynchronous and here just the result of the del() function call of the @link M.WebSqlProvider is used.
      */
+    // MOVE TO STORE
     del: function(obj) {
         if(!this.dataProvider) {
             M.Logger.log('No data provider given.', M.ERR);
@@ -533,6 +536,7 @@ M.Model = M.Object.extend(
     },
 
     // TODO: handle onSuccess AND onError
+    // MOVE TO STORE
     deepFind: function(records, callback) {
         //console.log('deepFind...');
         //console.log('### records.length: ' + records.length);
@@ -591,6 +595,7 @@ M.Model = M.Object.extend(
     /**
      * sync model with storage (only websql)
      */
+    // MOVE TO STORE
     schemaSync: function() {
 
     }

@@ -43,36 +43,68 @@ M.Store = M.Object.extend(
         var store = M.Store.extend({
             model: obj.model,
             dataProvider: obj.dataProvider,
-            records: []
+            records: {}
         });
         return store;
     },
 
-    createRecord: function() {
-        // ruft "add" auf (evtl. über params...)
-        // nutzen von model registry oder implementieren der funktionalität: eindeutige ID etc...
+    createRecord: function(obj, noAdd) {
+        var record = this.model.createRecord(obj);
+        if(!noAdd) {
+            this.add(record);
+        }
+        return record;
     },
 
-    add: function() {
-        // reines add zu den records
+    // add to store (nix mit DP)
+    add: function(record) {
+        this.records[record.m_id] = record;
+        // trigger event #RECORDS_DID_CHANGE#
+        // konfigurierbard über 2. parameter fireEvent: event nur einmal feuern bei bulkimport (find)
     },
 
-    find: function() {
-        // ohne parameter: findAll() ....
+    // remove from store (nix mit DP)
+    remove: function(record) {
+        var m_id = record && record.type === 'M.Model' ? record.m_id : record;
+        if(m_id && this.records[m_id]) {
+            delete this.records[m_id];
+        } else {
+            // throw error
+        }
+        // trigger event #RECORDS_DID_CHANGE#
     },
 
-    del: function() {
+    find: function(obj) {
+        this.dataProvider.find(obj);
+        // success/error callbacks für store um events zu feuern
+    },
+
+    del: function(obj) {
+        this.dataProvider.del(obj);
+        // success/error callbacks für store um events zu feuern
         // über property festlegen ob DELETE nur für store gilt oder für die echten daten dahinter (data provider)
         // mit paratemer kann gezieltes record angesprochen werden (id ....)
     },
 
-    save: function() {
+    save: function(options) {
+        if(options && options.record && typeof(options.record)) {
+            this.dataProvider.save({
+                model: options.record
+            });
+        } else {
+            
+        }
+        // success/error callbacks für store um events zu feuern
         // speichert alle nicht gespeicherten records "überall"
         // mit paratemer kann gezieltes record angesprochen werden (id ....)
     },
 
-    getRecordForId: function() {
-        // gibt record mit bes. ID zurück
+    getRecordForId: function(id) {
+        return this.records[id];
+    },
+
+    getNumberOfRecords: function() {
+        return _.size(this.records);
     }
 
 });
