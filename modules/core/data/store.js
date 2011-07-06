@@ -13,7 +13,8 @@ m_require('core/utility/logger.js');
 /**
  * @class
  *
- * .......
+ * A store is used to manage a model and all of its records. It provides CRUD methods for creating,
+ * reading (find), updating (save) and deleting (del) records of a certain type of model.
  *
  * @extends M.Object
  */
@@ -30,21 +31,30 @@ M.Store = M.Object.extend(
 
     dataProvider: null,
 
-    records: [],
+    records: null,
 
-    create: function() {
-        // erzeugt store (config-objekt...)
+    /**
+     * This method creates and initializes a store.
+     *
+     * @param obj
+     * @returns {M.Store} The store.
+     */
+    create: function(obj) {
+        var store = M.Store.extend({
+            model: obj.model,
+            dataProvider: obj.dataProvider,
+            records: []
+        });
+        return store;
+    },
+
+    createRecord: function() {
         // ruft "add" auf (evtl. über params...)
-
         // nutzen von model registry oder implementieren der funktionalität: eindeutige ID etc...
     },
 
     add: function() {
         // reines add zu den records
-    },
-
-    createRecord: function() {
-        // erzeugt record auf basis von model und pusht in records
     },
 
     find: function() {
