@@ -117,7 +117,9 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                 return NO;
             }
             var m = obj.model.createRecord($.extend(record, {m_id: parseInt(m_id), state: M.STATE_VALID}));
-            return m;
+            if(obj.callbacks && obj.callbacks.success && M.EventDispatcher.checkHandler(obj.callbacks.success)) {
+                this.bindToCaller(obj.callbacks.success.target, obj.callbacks.success.action, [obj.transactionId, m])();
+            }
         }
 
         if(obj.query){
@@ -178,11 +180,15 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                 M.Logger.log('Query does not satisfy query grammar.', M.WARN);
                 res = [];
             }
-
-            return res;
+            if(obj.callbacks && obj.callbacks.success && M.EventDispatcher.checkHandler(obj.callbacks.success)) {
+                this.bindToCaller(obj.callbacks.success.target, obj.callbacks.success.action, [obj.transactionId, res])();
+            }
             
         } else { /* if no query is passed, all models for modelName shall be returned */
-            return this.findAll(obj);
+            var records = this.findAll(obj);
+            if(obj.callbacks && obj.callbacks.success && M.EventDispatcher.checkHandler(obj.callbacks.success)) {
+                this.bindToCaller(obj.callbacks.success.target, obj.callbacks.success.action, [obj.transactionId, records])();
+            }
         }
     },
 
@@ -287,12 +293,10 @@ M.DataProviderWebStorage = M.DataProvider.extend(
     configure: function(obj) {
         obj = obj || {};
         switch(obj.storage) {
-            case M.WEBSTORAGE_LOCAL:
-                obj.storage = window.localStorage; // maybe check if available
-                break;
             case M.WEBSTORAGE_SESSION:
                 obj.storage = window.sessionStorage; // maybe check if possible
                 break;
+            case M.WEBSTORAGE_LOCAL:
             default:
                 obj.storage = window.localStorage;
                 break;
@@ -301,9 +305,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
         obj.keyPrefix = obj.keyPrefix ? obj.keyPrefix : M.Application.getConfig('keyPrefix');
         obj.keySuffix = obj.keySuffix ? obj.keySuffix : M.Application.getConfig('keySuffix');
 
-        return this.extend({
-            config:obj
-        });
+        return this.extend(obj);
     }
 
 });
