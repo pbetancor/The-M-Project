@@ -33,6 +33,8 @@ M.Store = M.Object.extend(
 
     records: null,
 
+    callbacks: null,
+
     /**
      * This method creates and initializes a store.
      *
@@ -43,7 +45,8 @@ M.Store = M.Object.extend(
         var store = M.Store.extend({
             model: obj.model,
             dataProvider: obj.dataProvider,
-            records: {}
+            records: {},
+            callbacks: {}
         });
         return store;
     },
@@ -51,20 +54,20 @@ M.Store = M.Object.extend(
     createRecord: function(obj, noAdd) {
         var record = this.model.createRecord(obj);
         if(!noAdd) {
-            this.add(record);
+            this.addRecord(record);
         }
         return record;
     },
 
     // add to store (nix mit DP)
-    add: function(record) {
+    addRecord: function(record) {
         this.records[record.m_id] = record;
         // trigger event #RECORDS_DID_CHANGE#
         // konfigurierbard über 2. parameter fireEvent: event nur einmal feuern bei bulkimport (find)
     },
 
     // remove from store (nix mit DP)
-    remove: function(record) {
+    removeRecord: function(record) {
         var m_id = record && record.type === 'M.Model' ? record.m_id : record;
         if(m_id && this.records[m_id]) {
             delete this.records[m_id];
@@ -74,16 +77,69 @@ M.Store = M.Object.extend(
         // trigger event #RECORDS_DID_CHANGE#
     },
 
-    find: function(obj) {
-        this.dataProvider.find(obj);
-        // success/error callbacks für store um events zu feuern
+    removeAllRecords: function() {
+        this.records = {};
     },
 
-    del: function(obj) {
-        this.dataProvider.del(obj);
+    /**
+     * returns YES/NO (zeigt an ob find erfolgreich aufgerufen wurde, NICHT, ob etwas gefunden wurde --> callbacks)
+     *
+     * obj:
+     *  - callbacks
+     *      - success
+     *          - target (optional)
+     *          - action
+     *      - error
+     *          - target (optional)
+     *          - action
+     *      - appendRecords
+     *
+     * @param obj
+     */
+    find: function(obj) {
+        if(!this.dataProvider) {
+            M.Logger.log('No data provider specified for this store.', M.ERR);
+            return;
+        }
+        obj = obj ? obj : {};
+
+        /* extends the given obj with self as model property in obj */
+        try {
+            var transactionId = M.UniqueId.uuid();
+            this.callbacks[transactionId] = $.extend(obj.callbacks, {appendRecords: obj.appendRecords ? obj.appendRecords : NO});
+            this.dataProvider.find($.extend(obj, {
+                model: this.model,
+                transactionId: transactionId,
+                callbacks: {
+                    success: {
+                        target: this,
+                        action: 'onSuccess'
+                    },
+                    error: {
+                        target: this,
+                        action: 'onError'
+                    }
+                }
+            }));
+        } catch(e) {
+            return NO;
+        }
+
+        return YES;
+
+        // TODO: success/error callbacks für store um events zu feuern
+    },
+
+    del: function(obj, noRemove) {
+        //this.dataProvider.del(obj);
         // success/error callbacks für store um events zu feuern
-        // über property festlegen ob DELETE nur für store gilt oder für die echten daten dahinter (data provider)
         // mit paratemer kann gezieltes record angesprochen werden (id ....)
+        // 'noRemove' --> nach del removeRecord aufrufen
+        if(obj) {
+
+        } else {
+            
+        }
     },
 
     save: function(options) {
@@ -105,6 +161,38 @@ M.Store = M.Object.extend(
 
     getNumberOfRecords: function() {
         return _.size(this.records);
+    },
+
+    onSuccess: function(transactionId, records) {
+        if(this.callbacks && this.callbacks[transactionId]) {
+            if(this.callbacks[transactionId].cleanRecords) {
+                this.records = {};
+            }
+
+            if(records.constructor == Array) {
+                var that = this;
+                _.each(records, function(record) {
+                    that.addRecord(record);
+                });
+            } else {
+                this.addRecord(records);
+            }
+
+            var callback = this.callbacks[transactionId].success;
+            if(callback && M.EventDispatcher.checkHandler(callback)) {
+                if(records.constructor == Array) {
+                    this.bindToCaller(callback.target, callback.action)();
+                } else {
+                    this.bindToCaller(callback.target, callback.action)();
+                }
+            }
+            
+            delete this.callbacks[transactionId];
+        }
+    },
+
+    onError: function(transactionId, error) {
+
     }
 
 });
