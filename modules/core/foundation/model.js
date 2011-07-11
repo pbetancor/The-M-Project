@@ -410,18 +410,16 @@ M.Model = M.Object.extend(
     // MOVE TO STORE
     find: function(obj){
         if(!this.dataProvider) {
-            M.Logger.log('No data provider given.', M.ERR);
+            M.Logger.log('No data provider given for this store.', M.ERR);
+            return;
         }
         obj = obj ? obj : {};
         /* check if the record list shall be cleared (default) before new found model records are appended to the record list */
-        /* TODO: needs to be placed in callback */
+        /* TODO: handle in store / DP
         obj['deleteRecordList'] = obj['deleteRecordList'] ? obj.deleteRecordList : YES;
         if(obj.deleteRecordList) {
             this.recordManager.removeAll();
-        }
-        if(!this.dataProvider) {
-            M.Logger.log('No data provider given.', M.ERR);
-        }
+        }*/
 
         /* extends the given obj with self as model property in obj */
         return this.dataProvider.find( $.extend(obj, {model: this}) );
