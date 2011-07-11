@@ -201,20 +201,16 @@ M.DataProviderWebStorage = M.DataProvider.extend(
      * parameter passed.
      */
     findByKey: function(obj) {
-        if(obj.key) {
+        var reg = new RegExp('^' + this.keyPrefix + M.Application.name + this.keySuffix);
+        /* assume that if key starts with local storage prefix, correct key is given, other wise construct it and key might be m_id */
+        obj.key = reg.test(obj.key) ? obj.key : this.keyPrefix + M.Application.name + this.keySuffix + obj.model.name + '_' + obj.key;
 
-            var reg = new RegExp('^' + this.keyPrefix + M.Application.name + this.keySuffix);
-            /* assume that if key starts with local storage prefix, correct key is given, other wise construct it and key might be m_id */
-            obj.key = reg.test(obj.key) ? obj.key : this.keyPrefix + M.Application.name + this.keySuffix + obj.model.name + '_' + obj.key;
-
-            if(this.storage.getItem(obj.key)) { // if key is available
-                return this.buildRecord(obj.key, obj)
-            } else {
-                return NO;
-            }
+        // if key is available
+        if(this.storage.getItem(obj.key)) {
+            return this.buildRecord(obj.key, obj)
+        } else {
+            return NO;
         }
-        M.Logger.log("Please provide a key.", M.WARN);
-        return NO;
     },
 
     /**
@@ -227,7 +223,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
      */
     findAll: function(obj) {
         var result = [];
-        for (var i = 0; i < this.storage.length; i++){
+        for(var i = 0; i < this.storage.length; i++) {
             var k = this.storage.key(i);
             regexResult = new RegExp('^' + this.keyPrefix + M.Application.name + this.keySuffix + obj.model.name + '_').exec(k);
             if(regexResult) {
@@ -236,7 +232,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                 /*construct new model record with the saved m_id*/
                 var reg = new RegExp('^' + this.keyPrefix + M.Application.name + this.keySuffix + obj.model.name + '_([0-9]+)').exec(k);
                 var m_id = reg && reg[1] ? reg[1] : null;
-                if (!m_id) {
+                if(!m_id) {
                     M.Logger.log('Model Record m_id not correct: ' + m_id, M.ERR);
                     continue; // if m_id does not exist, continue with next record element
                 }

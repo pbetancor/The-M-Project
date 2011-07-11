@@ -165,7 +165,7 @@ M.Store = M.Object.extend(
 
     onSuccess: function(transactionId, records) {
         if(this.callbacks && this.callbacks[transactionId]) {
-            if(this.callbacks[transactionId].cleanRecords) {
+            if(!this.callbacks[transactionId].appendRecords) {
                 this.records = {};
             }
 
@@ -192,7 +192,10 @@ M.Store = M.Object.extend(
     },
 
     onError: function(transactionId, error) {
-
+        if(this.callbacks && this.callbacks[transactionId]) {
+            var callback = this.callbacks[transactionId].error;
+            delete this.callbacks[transactionId];
+        }
     }
 
 });
