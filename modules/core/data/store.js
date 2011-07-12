@@ -142,10 +142,23 @@ M.Store = M.Object.extend(
         }
     },
 
-    save: function(options) {
-        if(options && options.record && typeof(options.record)) {
+    save: function(obj) {
+        if(obj && obj.record && typeof(obj.record) === 'object') {
+            var transactionId = M.UniqueId.uuid();
+            this.callbacks[transactionId] = obj.callbacks;
             this.dataProvider.save({
-                model: options.record
+                model: obj.record,
+                transactionId: transactionId,
+                callbacks: {
+                    success: {
+                        target: this,
+                        action: 'onSuccess'
+                    },
+                    error: {
+                        target: this,
+                        action: 'onError'
+                    }
+                }
             });
         } else {
             
@@ -169,13 +182,15 @@ M.Store = M.Object.extend(
                 this.records = {};
             }
 
-            if(records.constructor == Array) {
-                var that = this;
-                _.each(records, function(record) {
-                    that.addRecord(record);
-                });
-            } else {
-                this.addRecord(records);
+            if(records) {
+                if(records.constructor == Array) {
+                    var that = this;
+                    _.each(records, function(record) {
+                        that.addRecord(record);
+                    });
+                } else {
+                    this.addRecord(records);
+                }
             }
 
             var callback = this.callbacks[transactionId].success;
