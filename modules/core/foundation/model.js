@@ -9,13 +9,13 @@
 //            http://github.com/mwaylabs/The-M-Project/blob/master/GPL-LICENSE
 // ==========================================================================
 
-M.STATE_UNDEFINED = 'state_undefined';
 M.STATE_NEW = 'state_new';
-M.STATE_INSYNCPOS = 'state_insyncpos';
-M.STATE_INSYNCNEG = 'state_insyncneg';
-M.STATE_LOCALCHANGED = 'state_localchange';
-M.STATE_VALID = 'state_valid';
-M.STATE_INVALID = 'state_invalid';
+M.STATE_NEW_VALID = 'state_new_valid';
+M.STATE_NEW_INVALID = 'state_new_invalid';
+M.STATE_DIRTY = 'state_dirty';
+M.STATE_DIRTY_VALID = 'state_dirty_valid';
+M.STATE_DIRTY_INVALID = 'state_dirty_invalid';
+M.STATE_INSYNC = 'state_insync';
 M.STATE_DELETED = 'state_deleted';
 
 m_require('core/data/model_registry.js');
