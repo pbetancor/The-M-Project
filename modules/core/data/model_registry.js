@@ -62,7 +62,7 @@ M.ModelRegistry = M.Object.extend(
      * @param {Number} m_id The id of the model, e.g. 1.
      */
     setId: function(modelName, m_id) {
-        if(this.registry[modelName]){
+        if(this.registry[modelName] !== undefined && this.registry[modelName] !== null && typeof(this.registry[modelName] === 'number')) {
             this.registry[modelName] = m_id;
         }
     },
