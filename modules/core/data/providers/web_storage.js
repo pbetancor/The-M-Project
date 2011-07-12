@@ -63,9 +63,11 @@ M.DataProviderWebStorage = M.DataProvider.extend(
             var value = a.join('');*/
             var value = JSON.stringify(obj.model.record);
             this.storage.setItem(this.keyPrefix + M.Application.name + this.keySuffix + obj.model.name + '_' + obj.model.m_id, value);
-            return YES;
+            if(obj.callbacks && obj.callbacks.success && M.EventDispatcher.checkHandler(obj.callbacks.success)) {
+                this.bindToCaller(obj.callbacks.success.target, obj.callbacks.success.action, obj.transactionId)();
+            }
         } catch(e) {
-            M.Logger.log(M.WARN, 'Error saving ' + obj.model.record + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.model.name + '_' + that.m_id);
+            M.Logger.log(M.WARN, 'Error saving ' + obj.model.record + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.model.name + '_' + obj.model.m_id);
             return NO;
         }
 
