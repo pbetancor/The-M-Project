@@ -35,6 +35,8 @@ M.Store = M.Object.extend(
 
     callbacks: null,
 
+    opId: 0,
+
     /**
      * This method creates and initializes a store.
      *
@@ -82,58 +84,169 @@ M.Store = M.Object.extend(
     },
 
     /**
-     * returns YES/NO (zeigt an ob find erfolgreich aufgerufen wurde, NICHT, ob etwas gefunden wurde --> callbacks)
-     *
-     * obj:
-     *  - callbacks
-     *      - success
-     *          - target (optional)
-     *          - action
-     *      - error
-     *          - target (optional)
-     *          - action
-     *      - appendRecords
-     *
-     * @param obj
+     * {
+     *   id: 12,
+     *   query: 'bla bla bla',
+     *   appendRecords: YES,
+     *   callbacks: {
+     *     success: {
+     *       target: MyApp.MyController,
+     *       action: 'itWorked'
+     *     },
+     *     error: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     }
+     *   }
+     * }
      */
     find: function(obj) {
-        if(!this.dataProvider) {
-            M.Logger.log('No data provider specified for this store.', M.ERR);
+        /* check if the store is valid */
+        if(!this.checkStore()) {
             return;
         }
-        obj = obj ? obj : {};
 
-        /* extends the given obj with self as model property in obj */
-        try {
-            var transactionId = M.UniqueId.uuid();
-            this.callbacks[transactionId] = $.extend(obj.callbacks, {appendRecords: obj.appendRecords ? obj.appendRecords : NO});
-            this.dataProvider.find($.extend(obj, {
-                model: this.model,
-                transactionId: transactionId,
-                callbacks: {
-                    success: {
-                        target: this,
-                        action: 'onSuccess'
-                    },
-                    error: {
-                        target: this,
-                        action: 'onError'
-                    }
-                }
-            }));
-        } catch(e) {
-            return NO;
+        /* initialize obj object if not done already */
+        obj = obj || {};
+
+        /* store this operation's application callbacks for further use */
+        this.callbacks[this.opId] = obj.callbacks;
+
+        /* add the appenRecord property to the callbacks object to be able to use this later, too */
+        if(this.callbacks[this.opId]) {
+            this.callbacks[this.opId].appendRecords = obj.appendRecords ? obj.appendRecords : NO;
+        } else {
+            this.callbacks[this.opId] = {
+                appendRecords: obj.appendRecords ? obj.appendRecords : NO
+            }
         }
 
-        return YES;
+        /* if an id is passed, remove a possible query (to make it easier for the data provider to decide what to do) */
+        if(obj && obj.id && typeof(obj.id) !== 'object') {
+            if(obj && obj.query && typeof(obj.query) !== 'object') {
+                delete obj.query;
+            }
+        /* if neither an id nor a query is passed, log an error and return */
+        } else {
+            if(!(obj && obj.query && typeof(obj.query) !== 'object')) {
+                M.Logger.log('No valid id or query passed when calling find() in store for model ' + this.model.name + '.', M.ERR);
+                return;
+            }
+        }
 
-        // TODO: success/error callbacks für store um events zu feuern
+        /* call the data provider's save method and pass id/query, callbacks and some meta information */
+        this.dataProvider.save({
+            id: obj.id,
+            query: obj.query,
+            opId: this.opId++,
+            callbacks: {
+                success: {
+                    target: this,
+                    action: 'onSuccess'
+                },
+                error: {
+                    target: this,
+                    action: 'onError'
+                }
+            }
+        });
+    },
+
+    /**
+     * {
+     *   appendRecords: YES,
+     *   callbacks: {
+     *     successOp: {
+     *       target: MyApp.MyController,
+     *       action: 'opWorked'
+     *     },
+     *     successTx: {
+     *       target: MyApp.MyController,
+     *       action: 'txWorked'
+     *     },
+     *     success: {
+     *       target: MyApp.MyController,
+     *       action: 'itWorked'
+     *     },
+     *     errorOp: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     },
+     *     errorTx: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     },
+     *     error: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     }
+     *   }
+     * }
+     */
+    findAll: function(obj) {
+        /* check if the store is valid */
+        if(!this.checkStore()) {
+            return;
+        }
+
+        /* initialize obj object if not done already */
+        obj = obj || {};
+
+        /* add the appenRecord property to the callbacks object to be able to use this later, too */
+        if(this.callbacks[this.opId]) {
+            this.callbacks[this.opId].appendRecords = obj.appendRecords ? obj.appendRecords : NO;
+        } else {
+            this.callbacks[this.opId] = {
+                appendRecords: obj.appendRecords ? obj.appendRecords : NO
+            }
+        }
+
+        /* remove id and query from obj to force findAll in data provider */
+        delete obj.id;
+        delete obj.query;
+
+        /* call the data provider's find method and pass the model, callbacks and some meta information */
+        this.dataProvider.find({
+            transactionSize: obj.transactionSize,
+            model: this.model,
+            opId: this.opId++,
+            callbacks: {
+                successOp: {
+                    target: this,
+                    action: 'onSuccessOp'
+                },
+                successTx: {
+                    target: this,
+                    action: 'onSuccessTx'
+                },
+                success: {
+                    target: this,
+                    action: 'onSuccess'
+                },
+                errorOp: {
+                    target: this,
+                    action: 'onErrorOp'
+                },
+                errorTx: {
+                    target: this,
+                    action: 'onErrorTx'
+                },
+                error: {
+                    target: this,
+                    action: 'onError'
+                }
+            }
+        });
     },
 
     del: function(obj, noRemove) {
         //this.dataProvider.del(obj);
         // success/error callbacks für store um events zu feuern
-        // mit paratemer kann gezieltes record angesprochen werden (id ....)
+        // mit parameter kann gezieltes record angesprochen werden (id ....)
         // 'noRemove' --> nach del removeRecord aufrufen
         if(obj) {
 
@@ -142,13 +255,67 @@ M.Store = M.Object.extend(
         }
     },
 
+    /**
+     * {
+     *   id: 12,
+     *   callbacks: {
+     *     success: {
+     *       target: MyApp.MyController,
+     *       action: 'itWorked'
+     *     },
+     *     error: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     }
+     *   }
+     * }
+     *
+     * {
+     *   record: aRecordObject,
+     *   callbacks: {
+     *     success: {
+     *       target: MyApp.MyController,
+     *       action: 'itWorked'
+     *     },
+     *     error: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     }
+     *   }
+     * }
+     */
     save: function(obj) {
+        /* check if the store is valid */
+        if(!this.checkStore()) {
+            return;
+        }
+        
+        /* initialize obj object if not done already */
+        obj = obj || {};
+
+        /* store this operation's application callbacks for further use */
+        this.callbacks[this.opId] = obj.callbacks;
+
+        /* If there is an id passed, try to get the corresponding record */
+        if(obj && obj.id && typeof(obj.id) !== 'object') {
+            /* if additionally a record was passed, use this instead */
+            obj.record = obj.record ? obj.record : this.getRecordById(obj.id);
+
+            /* if no record could be retrieved (or was passed), log an error and return */
+            if(!obj.record) {
+                M.Logger.log('No valid id passed when calling save() in store for model ' + this.model.name + '.', M.ERR);
+                return;
+            }
+        }
+
+        /* If there is a record passed (or retrieved by a given id), save this record */
         if(obj && obj.record && typeof(obj.record) === 'object') {
-            var transactionId = M.UniqueId.uuid();
-            this.callbacks[transactionId] = obj.callbacks;
+            /* call the data provider's save method and pass the record, callbacks and some meta information */
             this.dataProvider.save({
-                model: obj.record,
-                transactionId: transactionId,
+                record: obj.record,
+                opId: this.opId++,
                 callbacks: {
                     success: {
                         target: this,
@@ -160,15 +327,155 @@ M.Store = M.Object.extend(
                     }
                 }
             });
+        /* If neither an id nor a record is passed, log an error and return */
         } else {
-            
+            M.Logger.log('No valid id or record passed when calling save() in store for model ' + this.model.name + '.', M.ERR);
+            return;
         }
-        // success/error callbacks für store um events zu feuern
-        // speichert alle nicht gespeicherten records "überall"
-        // mit paratemer kann gezieltes record angesprochen werden (id ....)
     },
 
-    getRecordForId: function(id) {
+    /**
+     * {
+     *   records: [aRecordObject, anotherRecordObject, aThirdRecordObject],
+     *   callbacks: {
+     *     successOp: {
+     *       target: MyApp.MyController,
+     *       action: 'opWorked'
+     *     },
+     *     successTx: {
+     *       target: MyApp.MyController,
+     *       action: 'txWorked'
+     *     },
+     *     success: {
+     *       target: MyApp.MyController,
+     *       action: 'itWorked'
+     *     },
+     *     errorOp: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     },
+     *     errorTx: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     },
+     *     error: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     }
+     *   }
+     * }
+     */
+    saveBulk: function(obj) {
+        /* check if the store is valid */
+        if(!this.checkStore()) {
+            return;
+        }
+        
+        /* initialize obj object if not done already */
+        obj = obj || {};
+
+        /* store this operation's application callbacks for further use */
+        this.callbacks[this.opId] = obj.callbacks;
+
+        /* if no records were passed, log an error and return */
+        if(!(obj.records)) {
+            M.Logger.log('No records passed to be saved (saveBull()) in store for model ' + this.model.name + '.', M.ERR);
+            return;
+        }
+
+        /* call the data provider's save method, provide the records array, callbacks and some meta information */
+        this.dataProvider.save({
+            record: obj.records,
+            opId: this.opId,
+            transactionSize: obj.transactionSize ? obj.transactionSize : obj.records.length,
+            callbacks: {
+                successOp: {
+                    target: this,
+                    action: 'onSuccessOp'
+                },
+                successTx: {
+                    target: this,
+                    action: 'onSuccessTx'
+                },
+                success: {
+                    target: this,
+                    action: 'onSuccess'
+                },
+                errorOp: {
+                    target: this,
+                    action: 'onErrorOp'
+                },
+                errorTx: {
+                    target: this,
+                    action: 'onErrorTx'
+                },
+                error: {
+                    target: this,
+                    action: 'onError'
+                }
+            }
+        });
+    },
+
+    /**
+     * {
+     *   callbacks: {
+     *     successOp: {
+     *       target: MyApp.MyController,
+     *       action: 'opWorked'
+     *     },
+     *     successTx: {
+     *       target: MyApp.MyController,
+     *       action: 'txWorked'
+     *     },
+     *     success: {
+     *       target: MyApp.MyController,
+     *       action: 'itWorked'
+     *     },
+     *     errorOp: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     },
+     *     errorTx: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     },
+     *     error: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     }
+     *   }
+     * }
+     */
+    saveAll: function(obj) {
+        /* check if the store is valid */
+        if(!this.checkStore()) {
+            return;
+        }
+
+        /* initialize obj object if not done already */
+        obj = obj || {};
+
+        /* retrieve all records, that can be saved (c.p. state machine) */
+        obj.records = this.getRecordsByState([M.STATE_DIRTY_VALID, M.STATE_NEW_VALID]);
+
+        /* if no records were found that can be stored, return */
+        if(!obj.records) {
+            M.Logger.log('Nothing to be saved in store for model ' + this.model.name + '.', M.INFO);
+            return;
+        }
+
+        /* use saveBulk to actually save those records */
+        this.saveBulk(obj);
+    },
+
+    getRecordById: function(id) {
         return this.records[id];
     },
 
@@ -176,41 +483,134 @@ M.Store = M.Object.extend(
         return _.size(this.records);
     },
 
-    onSuccess: function(transactionId, records) {
-        if(this.callbacks && this.callbacks[transactionId]) {
-            if(!this.callbacks[transactionId].appendRecords) {
-                this.records = {};
-            }
+    /**
+     * returns all records that match the given state (or one of them if an array is passed)
+     *
+     * @param state
+     */
+    getRecordsByState: function(state) {
+        if(!_.isArray(state)) {
+            /* to keep code clean underneath we always use _.include with an array even if it's one state passed */
+            state = [state];
+        }
+        return _.select(this.records, function(rec) {
+            return _.include(state, rec.state);
+        });
+    },
 
-            if(records) {
-                if(records.constructor == Array) {
-                    var that = this;
-                    _.each(records, function(record) {
-                        that.addRecord(record);
-                    });
-                } else {
-                    this.addRecord(records);
-                }
-            }
+    onSuccessOp: function(opId, obj) {
+        if(this.callbacks && this.callbacks[opId]) {
+            var callback = this.callbacks[opId].successOp;
+            delete this.callbacks[opId];
+        }
 
-            var callback = this.callbacks[transactionId].success;
-            if(callback && M.EventDispatcher.checkHandler(callback)) {
-                if(records.constructor == Array) {
-                    this.bindToCaller(callback.target, callback.action)();
-                } else {
-                    this.bindToCaller(callback.target, callback.action)();
-                }
+        if(obj && obj.operationType) {
+            switch(obj.operationType) {
+                case 'save':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.record, obj.opCount, obj.opTotal, obj.txCount, obj.txTotal, obj.txOpCount, obj.txOpTotal])();
+                    }
+                    break;
+                case 'find':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.record, obj.opCount, obj.opTotal, obj.txCount, obj.txTotal, obj.txOpCount, obj.txOpTotal])();
+                    }
+                    break;
             }
-            
-            delete this.callbacks[transactionId];
         }
     },
 
-    onError: function(transactionId, error) {
-        if(this.callbacks && this.callbacks[transactionId]) {
-            var callback = this.callbacks[transactionId].error;
-            delete this.callbacks[transactionId];
+    onSuccessTx: function(opId, obj) {
+        if(this.callbacks && this.callbacks[opId]) {
+            var callback = this.callbacks[opId].successTx;
+            delete this.callbacks[opId];
         }
+
+        if(obj && obj.operationType) {
+            switch(obj.operationType) {
+                case 'save':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.record, obj.txCount, obj.txTotal])();
+                    }
+                    break;
+                case 'find':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.record, obj.txCount, obj.txTotal])();
+                    }
+                    break;
+            }
+        }
+    },
+
+    onSuccess: function(opId, obj) {
+        var callback = null;
+        if(this.callbacks && this.callbacks[opId]) {
+            callback = this.callbacks[opId].successOp;
+            delete this.callbacks[opId];
+        }
+
+        if(obj && obj.operationType) {
+            switch(obj.operationType) {
+                case 'save':
+                    if(obj.records) {
+                        if(!_.isArray(obj.records)) {
+                            obj.records = [obj.records];
+                        }
+                    }
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.records])();
+                    }
+                    break;
+                case 'find':
+                    if(!this.callbacks[opId].appendRecords) {
+                        this.records = {};
+                    }
+                    if(obj.records) {
+                        if(!_.isArray(obj.records)) {
+                            obj.records = [obj.records];
+                        }
+                        var that = this;
+                        _.each(obj.records, function(record) {
+                            that.addRecord(record);
+                        });
+                    }
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.records])();
+                    }
+                    break;
+                case 'del':
+                    break;
+            }
+        }
+    },
+
+    onErrorOp: function(opId, obj) {
+        if(this.callbacks && this.callbacks[opId]) {
+            var callback = this.callbacks[opId].errorOp;
+            delete this.callbacks[opId];
+        }
+    },
+
+    onErrorTx: function(opId, obj) {
+        if(this.callbacks && this.callbacks[opId]) {
+            var callback = this.callbacks[opId].errorTx;
+            delete this.callbacks[opId];
+        }
+    },
+
+    onError: function(opId, obj) {
+        if(this.callbacks && this.callbacks[opId]) {
+            var callback = this.callbacks[opId].error;
+            delete this.callbacks[opId];
+        }
+    },
+
+    checkStore: function() {
+        if(!this.dataProvider) {
+            M.Logger.log('No data provider specified for this store.', M.ERR);
+            return NO;
+        }
+        return YES;
     }
 
 });
