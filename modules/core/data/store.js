@@ -113,7 +113,7 @@ M.Store = M.Object.extend(
         /* store this operation's application callbacks for further use */
         this.callbacks[this.opId] = obj.callbacks;
 
-        /* add the appenRecord property to the callbacks object to be able to use this later, too */
+        /* add the appendRecord property to the callbacks object to be able to use this later, too */
         if(this.callbacks[this.opId]) {
             this.callbacks[this.opId].appendRecords = obj.appendRecords ? obj.appendRecords : NO;
         } else {
@@ -196,7 +196,10 @@ M.Store = M.Object.extend(
         /* initialize obj object if not done already */
         obj = obj || {};
 
-        /* add the appenRecord property to the callbacks object to be able to use this later, too */
+        /* store this operation's application callbacks for further use */
+        this.callbacks[this.opId] = obj.callbacks;
+
+        /* add the appendRecord property to the callbacks object to be able to use this later, too */
         if(this.callbacks[this.opId]) {
             this.callbacks[this.opId].appendRecords = obj.appendRecords ? obj.appendRecords : NO;
         } else {
@@ -243,16 +246,125 @@ M.Store = M.Object.extend(
         });
     },
 
-    del: function(obj, noRemove) {
-        //this.dataProvider.del(obj);
-        // success/error callbacks für store um events zu feuern
-        // mit parameter kann gezieltes record angesprochen werden (id ....)
-        // 'noRemove' --> nach del removeRecord aufrufen
-        if(obj) {
-
-        } else {
-            
+    /**
+     * {
+     *   id: 12,
+     *   callbacks: {
+     *     success: {
+     *       target: MyApp.MyController,
+     *       action: 'itWorked'
+     *     },
+     *     error: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     }
+     *   }
+     * }
+     *
+     * {
+     *   record: aRecordObject,
+     *   callbacks: {
+     *     success: {
+     *       target: MyApp.MyController,
+     *       action: 'itWorked'
+     *     },
+     *     error: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     }
+     *   }
+     * }
+     */
+    del: function(obj) {
+        // TODO: 'noRemove' --> nach del removeRecord aufrufen
+        /* check if the store is valid */
+        if(!this.checkStore()) {
+            return;
         }
+
+        /* initialize obj object if not done already */
+        obj = obj || {};
+
+        /* store this operation's application callbacks for further use */
+        this.callbacks[this.opId] = obj.callbacks;
+
+        /* add the removeRecord property to the callbacks object to be able to use this later, too */
+        if(this.callbacks[this.opId]) {
+            this.callbacks[this.opId].removeRecord = (typeof(obj.removeRecord) === 'boolean') ? obj.removeRecord : YES;
+        } else {
+            this.callbacks[this.opId] = {
+                removeRecord: (typeof(obj.removeRecord) === 'boolean') ? obj.removeRecord : YES
+            }
+        }
+
+        /* If there is an id passed, try to get the corresponding record */
+        if(obj && obj.id && typeof(obj.id) !== 'object') {
+            /* if additionally a record was passed, use this instead */
+            obj.record = obj.record ? obj.record : this.getRecordById(obj.id);
+
+            /* if no record could be retrieved (or was passed), log an error and return */
+            if(!obj.record) {
+                M.Logger.log('No valid id passed when calling del() in store for model ' + this.model.name + '.', M.ERR);
+                return;
+            }
+        }
+
+        /* If there is a record passed (or retrieved by a given id), delete this record */
+        if(obj && obj.record && typeof(obj.record) === 'object') {
+            /* call the data provider's del method and pass the record, callbacks and some meta information */
+            this.dataProvider.del({
+                record: obj.record,
+                opId: this.opId++,
+                callbacks: {
+                    success: {
+                        target: this,
+                        action: 'onSuccess'
+                    },
+                    error: {
+                        target: this,
+                        action: 'onError'
+                    }
+                }
+            });
+        /* If neither an id nor a record is passed, log an error and return */
+        } else {
+            M.Logger.log('No valid id or record passed when calling del() in store for model ' + this.model.name + '.', M.ERR);
+            return;
+        }
+    },
+
+    delBulk: function(obj) {
+          
+    },
+
+    delAll: function(obj) {
+        /* check if the store is valid */
+        if(!this.checkStore()) {
+            return;
+        }
+
+        /* initialize obj object if not done already */
+        obj = obj || {};
+
+        /* retrieve all records, that can not be deleted (c.p. state machine) */
+        var newRecords = this.getRecordsByState([M.STATE_NEW, M.STATE_NEW_VALID, M.STATE_NEW_INVALID]);
+
+        /* compute all records, that can deleted (c.p. state machine) */
+        obj.records = _.without.apply(_, [this.records].concat(newRecords));
+
+        /* remove the newRecords directly (since the haven't been saved before and only exist in memory) */
+        // TODO: remove newRecords and call callback
+
+        /* if no records were found that can be stored, return */
+        if(!obj.records) {
+            M.Logger.log('Nothing to be deleted in store for model ' + this.model.name + '.', M.INFO);
+            return;
+        }
+
+        /* use delBulk to actually delete those records */
+        this.delBulk(obj);
     },
 
     /**
