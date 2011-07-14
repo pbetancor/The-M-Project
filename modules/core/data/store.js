@@ -335,10 +335,125 @@ M.Store = M.Object.extend(
         }
     },
 
+    /**
+     * {
+     *   records: [aRecordObject, anotherRecordObject, aThirdRecordObject],
+     *   callbacks: {
+     *     successOp: {
+     *       target: MyApp.MyController,
+     *       action: 'opWorked'
+     *     },
+     *     successTx: {
+     *       target: MyApp.MyController,
+     *       action: 'txWorked'
+     *     },
+     *     success: {
+     *       target: MyApp.MyController,
+     *       action: 'itWorked'
+     *     },
+     *     errorOp: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     },
+     *     errorTx: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     },
+     *     error: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     }
+     *   }
+     * }
+     */
     delBulk: function(obj) {
-          
+        /* check if the store is valid */
+        if(!this.checkStore()) {
+            return;
+        }
+
+        /* initialize obj object if not done already */
+        obj = obj || {};
+
+        /* store this operation's application callbacks for further use */
+        this.callbacks[this.opId] = obj.callbacks;
+
+        /* if no records were passed, log an error and return */
+        if(!(obj.records)) {
+            M.Logger.log('No records passed to be deleted (delBulk()) in store for model ' + this.model.name + '.', M.ERR);
+            return;
+        }
+
+        /* call the data provider's del method, provide the records array, callbacks and some meta information */
+        this.dataProvider.save({
+            record: obj.records,
+            opId: this.opId,
+            transactionSize: obj.transactionSize ? obj.transactionSize : obj.records.length,
+            callbacks: {
+                successOp: {
+                    target: this,
+                    action: 'onSuccessOp'
+                },
+                successTx: {
+                    target: this,
+                    action: 'onSuccessTx'
+                },
+                success: {
+                    target: this,
+                    action: 'onSuccess'
+                },
+                errorOp: {
+                    target: this,
+                    action: 'onErrorOp'
+                },
+                errorTx: {
+                    target: this,
+                    action: 'onErrorTx'
+                },
+                error: {
+                    target: this,
+                    action: 'onError'
+                }
+            }
+        });
     },
 
+    /**
+     * {
+     *   callbacks: {
+     *     successOp: {
+     *       target: MyApp.MyController,
+     *       action: 'opWorked'
+     *     },
+     *     successTx: {
+     *       target: MyApp.MyController,
+     *       action: 'txWorked'
+     *     },
+     *     success: {
+     *       target: MyApp.MyController,
+     *       action: 'itWorked'
+     *     },
+     *     errorOp: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     },
+     *     errorTx: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     },
+     *     error: {
+     *       action: function(e) {
+     *         console.log(e);
+     *       }
+     *     }
+     *   }
+     * }
+     */
     delAll: function(obj) {
         /* check if the store is valid */
         if(!this.checkStore()) {
@@ -355,6 +470,11 @@ M.Store = M.Object.extend(
         obj.records = _.difference(this.records, newRecords);
 
         /* remove the newRecords directly (since the haven't been saved before and only exist in memory) */
+        for(var record in newRecords) {
+            /* TODO: maybe call callback, but what about transactions then? */
+            delete this.records[record];
+        }
+
         // TODO: remove newRecords and call callback
 
         /* if no records were found that can be stored, return */
@@ -494,7 +614,7 @@ M.Store = M.Object.extend(
 
         /* if no records were passed, log an error and return */
         if(!(obj.records)) {
-            M.Logger.log('No records passed to be saved (saveBull()) in store for model ' + this.model.name + '.', M.ERR);
+            M.Logger.log('No records passed to be saved (saveBulk()) in store for model ' + this.model.name + '.', M.ERR);
             return;
         }
 
@@ -618,12 +738,21 @@ M.Store = M.Object.extend(
 
         if(obj && obj.operationType) {
             switch(obj.operationType) {
+                case 'find':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.record, obj.opCount, obj.opTotal, obj.txCount, obj.txTotal, obj.txOpCount, obj.txOpTotal])();
+                    }
+                    break;
                 case 'save':
                     if(callback && M.EventDispatcher.checkHandler(callback)) {
                         this.bindToCaller(callback.target, callback.action, [obj.record, obj.opCount, obj.opTotal, obj.txCount, obj.txTotal, obj.txOpCount, obj.txOpTotal])();
                     }
                     break;
-                case 'find':
+                case 'del':
+                    /* remove record from record list */
+                    if(this.records) {
+                        delete this.records[obj.record.m_id]
+                    }
                     if(callback && M.EventDispatcher.checkHandler(callback)) {
                         this.bindToCaller(callback.target, callback.action, [obj.record, obj.opCount, obj.opTotal, obj.txCount, obj.txTotal, obj.txOpCount, obj.txOpTotal])();
                     }
@@ -640,14 +769,19 @@ M.Store = M.Object.extend(
 
         if(obj && obj.operationType) {
             switch(obj.operationType) {
-                case 'save':
-                    if(callback && M.EventDispatcher.checkHandler(callback)) {
-                        this.bindToCaller(callback.target, callback.action, [obj.record, obj.txCount, obj.txTotal])();
-                    }
-                    break;
                 case 'find':
                     if(callback && M.EventDispatcher.checkHandler(callback)) {
-                        this.bindToCaller(callback.target, callback.action, [obj.record, obj.txCount, obj.txTotal])();
+                        this.bindToCaller(callback.target, callback.action, [obj.records, obj.txCount, obj.txTotal])();
+                    }
+                    break;
+                case 'save':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.records, obj.txCount, obj.txTotal])();
+                    }
+                    break;
+                case 'del':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.records, obj.txCount, obj.txTotal])();
                     }
                     break;
             }
@@ -663,16 +797,6 @@ M.Store = M.Object.extend(
 
         if(obj && obj.operationType) {
             switch(obj.operationType) {
-                case 'save':
-                    if(obj.records) {
-                        if(!_.isArray(obj.records)) {
-                            obj.records = [obj.records];
-                        }
-                    }
-                    if(callback && M.EventDispatcher.checkHandler(callback)) {
-                        this.bindToCaller(callback.target, callback.action, [obj.records])();
-                    }
-                    break;
                 case 'find':
                     if(!this.callbacks[opId].appendRecords) {
                         this.records = {};
@@ -690,7 +814,29 @@ M.Store = M.Object.extend(
                         this.bindToCaller(callback.target, callback.action, [obj.records])();
                     }
                     break;
+                case 'save':
+                    if(obj.records) {
+                        if(!_.isArray(obj.records)) {
+                            obj.records = [obj.records];
+                        }
+                    }
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.records])();
+                    }
+                    break;
                 case 'del':
+                    if(obj.records) {
+                        if(!_.isArray(obj.records)) {
+                            obj.records = [obj.records];
+                        }
+                        /* remove records from record list (only, if this is a single value, otherwise they were deleted in successOp before) */
+                        if(this.records && obj.records.length === 1) {
+                            delete this.records[obj.records[0].m_id]
+                        }
+                    }
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.records])();
+                    }
                     break;
             }
         }

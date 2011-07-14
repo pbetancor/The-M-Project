@@ -84,7 +84,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                     } catch(e) {
                         /* if save went wrong (exception thrown), leave operation loop and call error-callback */
                         isTransactionValid = NO;
-                        M.Logger.log(M.WARN, 'Error saving ' + obj.record.data + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id);
+                        M.Logger.log('Error saving ' + obj.record.data + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
 
                         /* error callback for single operation */
                         this.handleCallback(obj.callbacks, 'errorOp', [obj.opId, {
@@ -141,7 +141,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                 }]);
             } catch(e) {
                 /* if save went wrong (exception thrown) and call error-callback */
-                M.Logger.log(M.WARN, 'Error saving ' + obj.record.data + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id);
+                M.Logger.log('Error saving ' + obj.record.data + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
                 this.handleCallback(obj.callbacks, 'error', [obj.opId, {
                     operationType: 'save',
                     error: e
@@ -160,16 +160,98 @@ M.DataProviderWebStorage = M.DataProvider.extend(
      * @returns {Boolean} Boolean indicating whether save was successful (YES|true) or not (NO|false).
      */
     del: function(obj) {
-        try {
-            if(this.storage.getItem(this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id)){ // check if key-value pair exists
-                this.storage.removeItem(this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id);
-                obj.record.dataManager.remove(obj.record.m_id);
-                return YES;
+        /* if more that one record is passed, bulk-delete them */
+        if(_.isArray(obj.record)) {
+            var isTransactionValid = YES;
+            var txResult = [];
+            var txTotal = Math.ceil(obj.record.length/obj.transactionSize);
+
+            /* iterate through all transactions */
+            for(var tx = 0; tx < txTotal; tx++) {
+                /* iterate through all operations within the current transaction */
+                for(var op = 0 + tx * obj.transactionSize; op < (tx + 1) * obj.transactionSize; op++) {
+                    /* OPERATION */
+                    try {
+                        /* delete the record (or at least try...) */
+                        this.delRecord(obj.record[op]);
+
+                        /* if it worked (no exception thrown), store in transaction-array and call success-callback */
+                        txResult.push(obj.record[op]);
+                        this.handleCallback(obj.callbacks, 'successOp', [obj.opId, {
+                            operationType: 'del',
+                            record: obj.record[op],
+                            opCount: op,
+                            opTotal: obj.record.length,
+                            txCount: tx + 1,
+                            txTotal: txTotal,
+                            txOpCount: op - (tx * obj.transactionSize),
+                            txOpTotal: tx + 1 === txTotal ? obj.record.length % obj.transactionSize : obj.transactionSize
+                        }]);
+                    } catch(e) {
+                        /* if del went wrong (exception thrown), leave operation loop and call error-callback */
+                        isTransactionValid = NO;
+                        M.Logger.log('Error deleting ' + obj.record.data + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
+
+                        /* error callback for single operation */
+                        this.handleCallback(obj.callbacks, 'errorOp', [obj.opId, {
+                            operationType: 'del',
+                            error: e
+                        }]);
+                        break;
+                    }
+                }
+
+                /* TRANSACTION */
+                /* if flag is set to YES, everything is fine, so call success-callback of this transaction */
+                if(isTransactionValid) {
+                    this.handleCallback(obj.callbacks, 'successTx', [obj.opId, {
+                        operationType: 'del',
+                        records: txResult,
+                        txCount: tx + 1,
+                        txTotal: txTotal
+                    }]);
+                    txResult = [];
+                /* if flag is set to NO, something went wrong, so call error-callback of this transaction and leave transaction loop */
+                } else {
+                    this.handleCallback(obj.callbacks, 'errorTx', [obj.opId, {
+                        operationType: 'del'
+                    }]);
+                    break;
+                }
             }
-            return NO;
-        } catch(e) {
-            M.Logger.log(M.WARN, 'Error removing key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id + ' from localStorage');
-            return NO;
+
+            /* GLOBAL */
+            /* if flag is set to YES, the whole save process went well, so call global success-callback */
+            if(isTransactionValid) {
+                this.handleCallback(obj.callbacks, 'success', [obj.opId, {
+                    operationType: 'del',
+                    records: obj.record
+                }]);
+            /* if flag is set to NO, something went wrong during the save process, so call global success-callback */
+            } else {
+                this.handleCallback(obj.callbacks, 'error', [obj.opId, {
+                    operationType: 'del'
+                }]);
+            }
+        /* if only a single record is passed, save it */
+        } else {
+            try {
+                /* delete the record (or at least try...) */
+                this.delRecord(obj.record);
+
+                /* if it worked (no exception thrown), update its state and call success-callback */
+                this.handleCallback(obj.callbacks, 'success', [obj.opId, {
+                    operationType: 'del',
+                    records: obj.record
+                }]);
+            } catch(e) {
+                /* if save went wrong (exception thrown) and call error-callback */
+                M.Logger.log('Error deleting ' + obj.record.data + ' from localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
+                this.handleCallback(obj.callbacks, 'error', [obj.opId, {
+                    operationType: 'del',
+                    error: e
+                }]);
+            }
         }
     },
 
@@ -456,6 +538,16 @@ M.DataProviderWebStorage = M.DataProvider.extend(
             M.Logger.log(e, M.ERR);
             throw e;
         }
-    }
+    },
 
+    delRecord: function(record) {
+        /* delete record from web storage */
+        try {
+            this.storage.removeItem(this.keyPrefix + M.Application.name + this.keySuffix + record.name + '_' + record.m_id);
+        } catch(e) {
+            /* extendable... */
+            M.Logger.log(e, M.ERR);
+            throw e;
+        }
+    }
 });
