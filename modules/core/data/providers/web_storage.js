@@ -93,6 +93,9 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                         }]);
                         break;
                     }
+                    if(op === obj.record.length) {
+                        break;
+                    }
                 }
 
                 /* TRANSACTION */
@@ -165,6 +168,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
             var isTransactionValid = YES;
             var txResult = [];
             var txTotal = Math.ceil(obj.record.length/obj.transactionSize);
+            var invalidOp = null;
 
             /* iterate through all transactions */
             for(var tx = 0; tx < txTotal; tx++) {
@@ -190,6 +194,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                     } catch(e) {
                         /* if del went wrong (exception thrown), set the state, leave operation loop and call error-callback */
                         obj.record[op].state = M.STATE_DELETED;
+                        invalidOp = op;
                         isTransactionValid = NO;
                         M.Logger.log('Error deleting ' + obj.record.data + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
 
@@ -198,6 +203,9 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                             operationType: 'del',
                             error: e
                         }]);
+                        break;
+                    }
+                    if(op === obj.record.length) {
                         break;
                     }
                 }
@@ -214,6 +222,13 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                     txResult = [];
                 /* if flag is set to NO, something went wrong, so call error-callback of this transaction and leave transaction loop */
                 } else {
+                    /* mark all records (within this transaction), that could not be deleted as STATE_DELETED */
+                    for(var op = invalidOp; op < (tx + 1) * obj.transactionSize; op++) {
+                        obj.record[op].state = M.STATE_DELETED;
+                        if(op === obj.record.length) {
+                            break;
+                        }
+                    }
                     this.handleCallback(obj.callbacks, 'errorTx', [obj.opId, {
                         operationType: 'del'
                     }]);
@@ -230,6 +245,10 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                 }]);
             /* if flag is set to NO, something went wrong during the save process, so call global success-callback */
             } else {
+                /* mark all records, that could not be deleted as STATE_DELETED */
+                for(var op = invalidOp; op < obj.record.length; op++) {
+                    obj.record[op].state = M.STATE_DELETED;
+                }
                 this.handleCallback(obj.callbacks, 'error', [obj.opId, {
                     operationType: 'del'
                 }]);
