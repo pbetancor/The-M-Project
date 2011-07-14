@@ -69,7 +69,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                         this.saveRecord(obj.record[op]);
 
                         /* if it worked (no exception thrown), update its state, store in transaction-array and call success-callback */
-                        obj.record.state = M.STATE_INSYNC;
+                        obj.record[op].state = M.STATE_INSYNC;
                         txResult.push(obj.record[op]);
                         this.handleCallback(obj.callbacks, 'successOp', [obj.opId, {
                             operationType: 'save',
@@ -188,7 +188,8 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                             txOpTotal: tx + 1 === txTotal ? obj.record.length % obj.transactionSize : obj.transactionSize
                         }]);
                     } catch(e) {
-                        /* if del went wrong (exception thrown), leave operation loop and call error-callback */
+                        /* if del went wrong (exception thrown), set the state, leave operation loop and call error-callback */
+                        obj.record[op].state = M.STATE_DELETED;
                         isTransactionValid = NO;
                         M.Logger.log('Error deleting ' + obj.record.data + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
 
