@@ -342,6 +342,10 @@ M.Model = M.Object.extend(
         if(this.data[propName] !== val) {
             this.data[propName] = val;
             this.__meta[propName].isUpdated = YES;
+
+            /* now set the record's state to dirty */
+            this.state = M.STATE_DIRTY;
+
             /* mark data as updated with new timestamp*/
             this.data[M.Application.getConfig('timeStampUpdated')] = M.Date.now().format('yyyy/mm/dd HH:MM:ss');
         }
