@@ -352,7 +352,7 @@ M.Store = M.Object.extend(
         var newRecords = this.getRecordsByState([M.STATE_NEW, M.STATE_NEW_VALID, M.STATE_NEW_INVALID]);
 
         /* compute all records, that can deleted (c.p. state machine) */
-        obj.records = _.without.apply(_, [this.records].concat(newRecords));
+        obj.records = _.difference(this.records, newRecords);
 
         /* remove the newRecords directly (since the haven't been saved before and only exist in memory) */
         // TODO: remove newRecords and call callback
