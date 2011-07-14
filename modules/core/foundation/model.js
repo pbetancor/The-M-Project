@@ -63,12 +63,12 @@ M.Model = M.Object.extend(
     m_id: null,
 
     /**
-     * The model's record defines the properties that are semantically bound to this model:
-     * e.g. a person's record is (in simplest case): firstname, lastname, age.
+     * The model's data defines the properties that are semantically bound to this model:
+     * e.g. a person's data is (in simplest case): firstname, lastname, age.
      *
-     * @type Object record
+     * @type Object data
      */
-    record: null,
+    data: null,
 
     /**
      * Object containing all meta information for the object's properties
@@ -122,7 +122,7 @@ M.Model = M.Object.extend(
 
         var rec = this.extend({
             m_id: obj.m_id ? obj.m_id : M.ModelRegistry.getNextId(this.name),
-            record: obj /* properties that are added to record here, but are not part of __meta, are deleted later (see below) */
+            data: obj /* properties that are added to data here, but are not part of __meta, are deleted later (see below) */
         });
         delete obj.m_id;
         rec.state = obj.state ? obj.state : M.STATE_NEW;
@@ -130,27 +130,27 @@ M.Model = M.Object.extend(
 
         /* set timestamps if new */
         if(rec.state === M.STATE_NEW) {
-            rec.record[M.Application.getConfig('timeStampCreated')] = +new Date();//M.Date.now().format('yyyy/mm/dd HH:MM:ss');
-            rec.record[M.Application.getConfig('timeStampUpdated')] = +new Date();//M.Date.now().format('yyyy/mm/dd HH:MM:ss');
+            rec.data[M.Application.getConfig('timeStampCreated')] = +new Date();//M.Date.now().format('yyyy/mm/dd HH:MM:ss');
+            rec.data[M.Application.getConfig('timeStampUpdated')] = +new Date();//M.Date.now().format('yyyy/mm/dd HH:MM:ss');
         }
 
-        for(var i in rec.record) {
+        for(var i in rec.data) {
 
             if(i === 'ID' || i === M.Application.getConfig('timeStampCreated') || i === M.Application.getConfig('timeStampUpdated')) {
                 continue;
             }
 
-            /* if record contains properties that are not part of __meta (means that are not defined in the model blueprint) delete them */
+            /* if data contains properties that are not part of __meta (means that are not defined in the model blueprint) delete them */
             if(!rec.__meta.hasOwnProperty(i)) {
                 M.Logger.log('Model ' + this.name + ' has no property called ' + i, M.WARN);
-                delete rec.record[i];
+                delete rec.data[i];
                 continue;
             }
 
-            /* if reference to a record entity is in param obj, assign it like in set. */
-            if(rec.__meta[i].dataType === 'Reference' && rec.record[i] && rec.record[i].type && rec.record[i].type === 'M.Model') {
+            /* if reference to a data entity is in param obj, assign it like in set. */
+            if(rec.__meta[i].dataType === 'Reference' && rec.data[i] && rec.data[i].type && rec.data[i].type === 'M.Model') {
                 // call set of model
-                rec.set(i, rec.record[i]);
+                rec.set(i, rec.data[i]);
             }
 
             if(rec.__meta[i]) {
@@ -284,14 +284,14 @@ M.Model = M.Object.extend(
      */
     get: function(propName, obj) {
         var metaProp = this.__meta[propName];
-        var recProp = this.record[propName];
+        var recProp = this.data[propName];
         /* return ref entity if property is a reference */
         if(metaProp && metaProp.dataType === 'Reference') {
-            if(metaProp.refEntity) {// if entity is already loaded and assigned here in model record
+            if(metaProp.refEntity) {// if entity is already loaded and assigned here in model data
                 return metaProp.refEntity;
-            } else if(recProp) { // if model record has a reference set, but it is not loaded yet
+            } else if(recProp) { // if model data has a reference set, but it is not loaded yet
                 if(obj && obj.force) { // if force flag was set
-                    /* custom call to deepFind with record passed only being the one property that needs to be filled, type of dp checked in deepFind */
+                    /* custom call to deepFind with data passed only being the one property that needs to be filled, type of dp checked in deepFind */
                     var callback = this.dataProvider.isAsync ? obj.onSuccess : null
                     this.deepFind([{
                         prop: propName,
@@ -331,19 +331,19 @@ M.Model = M.Object.extend(
         /* TODO: evaluate whether to save m_id in record and entity reference in __meta or other way round */
         if(this.__meta[propName].dataType === 'Reference' && val.type && val.type === 'M.Model') {    // reference set
             /* first check if new value is passed */
-            if(this.record[propName] !== val.m_id) {
-                /* set m_id of reference in record */
-                this.record[propName] = val.m_id;
+            if(this.data[propName] !== val.m_id) {
+                /* set m_id of reference in data */
+                this.data[propName] = val.m_id;
                 this.__meta[propName].refEntity = val;
             }
             return;
         }
 
-        if(this.record[propName] !== val) {
-            this.record[propName] = val;
+        if(this.data[propName] !== val) {
+            this.data[propName] = val;
             this.__meta[propName].isUpdated = YES;
-            /* mark record as updated with new timestamp*/
-            this.record[M.Application.getConfig('timeStampUpdated')] = M.Date.now().format('yyyy/mm/dd HH:MM:ss');
+            /* mark data as updated with new timestamp*/
+            this.data[M.Application.getConfig('timeStampUpdated')] = M.Date.now().format('yyyy/mm/dd HH:MM:ss');
         }
     },
 
