@@ -278,7 +278,6 @@ M.Store = M.Object.extend(
      * }
      */
     del: function(obj) {
-        // TODO: 'noRemove' --> nach del removeRecord aufrufen
         /* check if the store is valid */
         if(!this.checkStore()) {
             return;
@@ -381,6 +380,40 @@ M.Store = M.Object.extend(
         /* store this operation's application callbacks for further use */
         this.callbacks[this.opId] = obj.callbacks;
 
+        /* retrieve all records, that can not be deleted (c.p. state machine) */
+        obj.newRecords = this.getRecordsByState([M.STATE_NEW, M.STATE_NEW_VALID, M.STATE_NEW_INVALID]);
+
+        /* remove the newRecords directly, since the haven't been saved before and only exist in memory */
+        for(var record in obj.newRecords) {
+            /* only delete the record if it is part of the bulk operation */
+            if(obj.records[obj.newRecords[record].m_id]) {
+                /* call callback of delete record  */
+                /* all op and transaction counters are set to -1 to indicate that this is a soft deletion (record was not saved before) */
+                this.onSuccessOp(this.opId, {
+                    operationType: 'del',
+                    record: obj.newRecords[record],
+                    opCount: -1,
+                    opTotal: -1,
+                    txCount: -1,
+                    txTotal: -1,
+                    txOpCount: -1,
+                    txOpTotal: -1
+                });
+            }
+        }
+
+        /* compute all records, that can deleted (c.p. state machine) */
+        obj.records = _.difference(this.records, obj.newRecords);
+
+        /* add the newRecords property to the callbacks object to be able to use this later, too */
+        if(this.callbacks[this.opId]) {
+            this.callbacks[this.opId].newRecords = obj.newRecords;
+        } else {
+            this.callbacks[this.opId] = {
+                newRecords: obj.newRecords
+            }
+        }
+
         /* if no records were passed, log an error and return */
         if(!(obj.records)) {
             M.Logger.log('No records passed to be deleted (delBulk()) in store for model ' + this.model.name + '.', M.ERR);
@@ -388,7 +421,7 @@ M.Store = M.Object.extend(
         }
 
         /* call the data provider's del method, provide the records array, callbacks and some meta information */
-        this.dataProvider.save({
+        this.dataProvider.del({
             record: obj.records,
             opId: this.opId,
             transactionSize: obj.transactionSize ? obj.transactionSize : obj.records.length,
@@ -463,19 +496,8 @@ M.Store = M.Object.extend(
         /* initialize obj object if not done already */
         obj = obj || {};
 
-        /* retrieve all records, that can not be deleted (c.p. state machine) */
-        var newRecords = this.getRecordsByState([M.STATE_NEW, M.STATE_NEW_VALID, M.STATE_NEW_INVALID]);
-
-        /* compute all records, that can deleted (c.p. state machine) */
-        obj.records = _.difference(this.records, newRecords);
-
-        /* remove the newRecords directly (since the haven't been saved before and only exist in memory) */
-        for(var record in newRecords) {
-            /* TODO: maybe call callback, but what about transactions then? */
-            delete this.records[record];
-        }
-
-        // TODO: remove newRecords and call callback
+        /* set the records list as the records to be deleted (no matter what their state is) */
+        obj.records = this.records;
 
         /* if no records were found that can be stored, return */
         if(!obj.records) {
@@ -695,7 +717,8 @@ M.Store = M.Object.extend(
         obj = obj || {};
 
         /* retrieve all records, that can be saved (c.p. state machine) */
-        obj.records = this.getRecordsByState([M.STATE_DIRTY_VALID, M.STATE_NEW_VALID]);
+        //obj.records = this.getRecordsByState([M.STATE_DIRTY_VALID, M.STATE_NEW_VALID]);
+        obj.records = this.getRecordsByState([M.STATE_NEW, M.STATE_DIRTY]);
 
         /* if no records were found that can be stored, return */
         if(!obj.records) {
@@ -733,7 +756,6 @@ M.Store = M.Object.extend(
     onSuccessOp: function(opId, obj) {
         if(this.callbacks && this.callbacks[opId]) {
             var callback = this.callbacks[opId].successOp;
-            delete this.callbacks[opId];
         }
 
         if(obj && obj.operationType) {
@@ -750,7 +772,7 @@ M.Store = M.Object.extend(
                     break;
                 case 'del':
                     /* remove record from record list */
-                    if(this.records) {
+                    if(this.records && obj.record) {
                         delete this.records[obj.record.m_id]
                     }
                     if(callback && M.EventDispatcher.checkHandler(callback)) {
@@ -764,7 +786,6 @@ M.Store = M.Object.extend(
     onSuccessTx: function(opId, obj) {
         if(this.callbacks && this.callbacks[opId]) {
             var callback = this.callbacks[opId].successTx;
-            delete this.callbacks[opId];
         }
 
         if(obj && obj.operationType) {
@@ -791,8 +812,7 @@ M.Store = M.Object.extend(
     onSuccess: function(opId, obj) {
         var callback = null;
         if(this.callbacks && this.callbacks[opId]) {
-            callback = this.callbacks[opId].successOp;
-            delete this.callbacks[opId];
+            callback = this.callbacks[opId].success;
         }
 
         if(obj && obj.operationType) {
@@ -829,6 +849,13 @@ M.Store = M.Object.extend(
                         if(!_.isArray(obj.records)) {
                             obj.records = [obj.records];
                         }
+                        if(this.callbacks[opId].newRecords && !_.isArray(this.callbacks[opId].newRecords)) {
+                            this.callbacks[opId].newRecords = [this.callbacks[opId].newRecords];
+                        }
+
+                        /* unite really deleted records and the new ones that were only removed from memory */
+                        obj.records = _.union(obj.records, this.callbacks[opId].newRecords);
+
                         /* remove records from record list (only, if this is a single value, otherwise they were deleted in successOp before) */
                         if(this.records && obj.records.length === 1) {
                             delete this.records[obj.records[0].m_id]
@@ -840,25 +867,32 @@ M.Store = M.Object.extend(
                     break;
             }
         }
+
+        /* now finally delete the temporarily stored callbacks */
+        if(this.callbacks) {
+            delete this.callbacks[opId];
+        }
     },
 
     onErrorOp: function(opId, obj) {
         if(this.callbacks && this.callbacks[opId]) {
             var callback = this.callbacks[opId].errorOp;
-            delete this.callbacks[opId];
         }
     },
 
     onErrorTx: function(opId, obj) {
         if(this.callbacks && this.callbacks[opId]) {
             var callback = this.callbacks[opId].errorTx;
-            delete this.callbacks[opId];
         }
     },
 
     onError: function(opId, obj) {
         if(this.callbacks && this.callbacks[opId]) {
             var callback = this.callbacks[opId].error;
+        }
+
+        /* now finally delete the temporarily stored callbacks */
+        if(this.callbacks) {
             delete this.callbacks[opId];
         }
     },

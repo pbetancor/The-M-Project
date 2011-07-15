@@ -74,17 +74,17 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                         this.handleCallback(obj.callbacks, 'successOp', [obj.opId, {
                             operationType: 'save',
                             record: obj.record[op],
-                            opCount: op,
+                            opCount: op + 1,
                             opTotal: obj.record.length,
                             txCount: tx + 1,
                             txTotal: txTotal,
-                            txOpCount: op - (tx * obj.transactionSize),
+                            txOpCount: op  + 1 - (tx * obj.transactionSize),
                             txOpTotal: tx + 1 === txTotal ? obj.record.length % obj.transactionSize : obj.transactionSize
                         }]);
                     } catch(e) {
                         /* if save went wrong (exception thrown), leave operation loop and call error-callback */
                         isTransactionValid = NO;
-                        M.Logger.log('Error saving ' + obj.record.data + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
+                        M.Logger.log('Error saving record to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record[op].name + '_' + obj.record[op].m_id, M.WARN);
 
                         /* error callback for single operation */
                         this.handleCallback(obj.callbacks, 'errorOp', [obj.opId, {
@@ -144,7 +144,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                 }]);
             } catch(e) {
                 /* if save went wrong (exception thrown) and call error-callback */
-                M.Logger.log('Error saving ' + obj.record.data + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
+                M.Logger.log('Error saving record to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
                 this.handleCallback(obj.callbacks, 'error', [obj.opId, {
                     operationType: 'save',
                     error: e
@@ -184,11 +184,11 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                         this.handleCallback(obj.callbacks, 'successOp', [obj.opId, {
                             operationType: 'del',
                             record: obj.record[op],
-                            opCount: op,
+                            opCount: op + 1,
                             opTotal: obj.record.length,
                             txCount: tx + 1,
                             txTotal: txTotal,
-                            txOpCount: op - (tx * obj.transactionSize),
+                            txOpCount: op + 1 - (tx * obj.transactionSize),
                             txOpTotal: tx + 1 === txTotal ? obj.record.length % obj.transactionSize : obj.transactionSize
                         }]);
                     } catch(e) {
@@ -196,7 +196,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                         obj.record[op].state = M.STATE_DELETED;
                         invalidOp = op;
                         isTransactionValid = NO;
-                        M.Logger.log('Error deleting ' + obj.record.data + ' to localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
+                        M.Logger.log('Error deleting record from localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record[op].name + '_' + obj.record[op].m_id, M.WARN);
 
                         /* error callback for single operation */
                         this.handleCallback(obj.callbacks, 'errorOp', [obj.opId, {
@@ -266,7 +266,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                 }]);
             } catch(e) {
                 /* if save went wrong (exception thrown) and call error-callback */
-                M.Logger.log('Error deleting ' + obj.record.data + ' from localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
+                M.Logger.log('Error deleting record from localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record[op].name + '_' + obj.record.m_id, M.WARN);
                 this.handleCallback(obj.callbacks, 'error', [obj.opId, {
                     operationType: 'del',
                     error: e
@@ -421,18 +421,18 @@ M.DataProviderWebStorage = M.DataProvider.extend(
         var result = [];
         for(var i = 0; i < this.storage.length; i++) {
             var k = this.storage.key(i);
-            regexResult = new RegExp('^' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_').exec(k);
+            regexResult = new RegExp('^' + this.keyPrefix + M.Application.name + this.keySuffix + obj.model.name + '_').exec(k);
             if(regexResult) {
                 var record = this.buildRecord(k, obj);//JSON.parse(this.storage.getItem(k));
 
                 /*construct new model record with the saved m_id*/
-                var reg = new RegExp('^' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_([0-9]+)').exec(k);
+                var reg = new RegExp('^' + this.keyPrefix + M.Application.name + this.keySuffix + obj.model.name + '_([0-9]+)').exec(k);
                 var m_id = reg && reg[1] ? reg[1] : null;
                 if(!m_id) {
                     M.Logger.log('Model Record m_id not correct: ' + m_id, M.ERR);
                     continue; // if m_id does not exist, continue with next record element
                 }
-                var m = obj.record.createRecord($.extend(record, {m_id: parseInt(m_id), state: M.STATE_INSYNC}));
+                var m = obj.model.createRecord($.extend(record, {m_id: parseInt(m_id), state: M.STATE_INSYNC}));
                 
                 result.push(m);
             }
@@ -453,12 +453,12 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                 txResult.push(result[op]);
                 this.handleCallback(obj.callbacks, 'successOp', [obj.opId, {
                     operationType: 'find',
-                    opCount: op,
+                    opCount: op + 1,
                     opTotal: result.length,
                     record: result[op],
                     txCount: tx + 1,
                     txTotal: txTotal,
-                    txOpCount: op - (tx * obj.transactionSize),
+                    txOpCount: op + 1 - (tx * obj.transactionSize),
                     txOpTotal: tx + 1 === txTotal ? result.length % obj.transactionSize : obj.transactionSize
                 }]);
                 if(op === result.length) {
@@ -493,8 +493,8 @@ M.DataProviderWebStorage = M.DataProvider.extend(
     buildRecord: function(key, obj) {
         var record = JSON.parse(this.storage.getItem(key));
         for(var i in record) {
-            if(obj.record.__meta[i] && typeof(record[i]) !== obj.record.__meta[i].dataType.toLowerCase()) {
-                switch(obj.record.__meta[i].dataType) {
+            if(obj.model.__meta[i] && typeof(record[i]) !== obj.model.__meta[i].dataType.toLowerCase()) {
+                switch(obj.model.__meta[i].dataType) {
                     case 'Date':
                         record[i] = M.Date.create(record[i]);
                         break;
