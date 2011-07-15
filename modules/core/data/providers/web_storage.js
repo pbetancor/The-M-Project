@@ -266,7 +266,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
                 }]);
             } catch(e) {
                 /* if save went wrong (exception thrown) and call error-callback */
-                M.Logger.log('Error deleting record from localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record[op].name + '_' + obj.record.m_id, M.WARN);
+                M.Logger.log('Error deleting record from localStorage with key: ' + this.keyPrefix + M.Application.name + this.keySuffix + obj.record.name + '_' + obj.record.m_id, M.WARN);
                 this.handleCallback(obj.callbacks, 'error', [obj.opId, {
                     operationType: 'del',
                     error: e

@@ -289,15 +289,6 @@ M.Store = M.Object.extend(
         /* store this operation's application callbacks for further use */
         this.callbacks[this.opId] = obj.callbacks;
 
-        /* add the removeRecord property to the callbacks object to be able to use this later, too */
-        if(this.callbacks[this.opId]) {
-            this.callbacks[this.opId].removeRecord = (typeof(obj.removeRecord) === 'boolean') ? obj.removeRecord : YES;
-        } else {
-            this.callbacks[this.opId] = {
-                removeRecord: (typeof(obj.removeRecord) === 'boolean') ? obj.removeRecord : YES
-            }
-        }
-
         /* If there is an id passed, try to get the corresponding record */
         if(obj && obj.id && typeof(obj.id) !== 'object') {
             /* if additionally a record was passed, use this instead */
@@ -772,9 +763,7 @@ M.Store = M.Object.extend(
                     break;
                 case 'del':
                     /* remove record from record list */
-                    if(this.records && obj.record) {
-                        delete this.records[obj.record.m_id]
-                    }
+                    this.removeRecord(obj.record);
                     if(callback && M.EventDispatcher.checkHandler(callback)) {
                         this.bindToCaller(callback.target, callback.action, [obj.record, obj.opCount, obj.opTotal, obj.txCount, obj.txTotal, obj.txOpCount, obj.txOpTotal])();
                     }
@@ -849,16 +838,18 @@ M.Store = M.Object.extend(
                         if(!_.isArray(obj.records)) {
                             obj.records = [obj.records];
                         }
-                        if(this.callbacks[opId].newRecords && !_.isArray(this.callbacks[opId].newRecords)) {
+                        if(this.callbacks && this.callbacks[opId] && this.callbacks[opId].newRecords && !_.isArray(this.callbacks[opId].newRecords)) {
                             this.callbacks[opId].newRecords = [this.callbacks[opId].newRecords];
                         }
 
                         /* unite really deleted records and the new ones that were only removed from memory */
-                        obj.records = _.union(obj.records, this.callbacks[opId].newRecords);
+                        if(this.callbacks && this.callbacks[opId] && this.callbacks[opId].newRecords) {
+                            obj.records = _.union(obj.records, this.callbacks[opId].newRecords);
+                        }
 
                         /* remove records from record list (only, if this is a single value, otherwise they were deleted in successOp before) */
                         if(this.records && obj.records.length === 1) {
-                            delete this.records[obj.records[0].m_id]
+                            this.removeRecord(obj.records[0]);
                         }
                     }
                     if(callback && M.EventDispatcher.checkHandler(callback)) {
