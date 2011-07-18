@@ -70,9 +70,19 @@ M.LoaderView = M.View.extend(
     show: function(title) {
         this.refCount++;
         var title = title && typeof(title) === 'string' ? title : this.defaultTitle;
-        $('.ui-loader h1').text(title);
+        $.mobile.loadingMessage = title;
         if(this.refCount == 1){
             $.mobile.pageLoading();
+
+            /* position alert in the center of the possibly scrolled viewport */
+            var loader = $('.ui-loader');
+            var screenSize = M.Environment.getSize();
+            var scrollYOffset = window.pageYOffset;
+            var loaderHeight = loader.outerHeight();
+
+            var yPos = scrollYOffset + (screenSize[1]/2);
+            loader.css('top', yPos + 'px');
+            loader.css('margin-top', '-' + (loaderHeight/2) + 'px');
         }
     },
 

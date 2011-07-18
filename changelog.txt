@@ -16,6 +16,9 @@
   * Updated jQuery Mobile to 1.0b1 (and adjusted some parts of TMP to work with this new version properly)
   * Updated underscore.js to 1.1.7
   * Removed the VERSION file, since we maintain the version in m.js -> M.version
+  * Refactored alert and confirm dialog to have position dynamically calculated => always in center of the screen, even if page is scrolled. Semi-transparent background now has full page size.
+  * Added getTotalSize, getTotalHeight and getTotalWidth to M.Environment to get total size of document
+  * Auto-center M.Loader view when show() is called and the loader was hidden before
 
 ** Version 0.5 - Date 03.06.2011 **
 
