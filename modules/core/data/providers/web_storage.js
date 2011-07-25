@@ -457,6 +457,7 @@ M.DataProviderWebStorage = M.DataProvider.extend(
         var txResult = [];
         var txTotal = Math.ceil(result.length/obj.transactionSize);
 
+        // TODO: ADD PSEUDO ERROR-CALLBACKS
         for(var tx = 0; tx < txTotal; tx++) {
             for(var op = 0 + tx * obj.transactionSize; op < (tx + 1) * obj.transactionSize; op++) {
                 txResult.push(result[op]);
