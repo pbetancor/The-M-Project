@@ -482,7 +482,7 @@ M.DataProviderWebSql = M.DataProvider.extend(
      * @param {Number} transactionSize
      */
     bulkImport: function(obj) {
-
+                
         if(!this.isInitialized) {
             this.internalCallback = this.bulkImport;
             this.init(obj);
