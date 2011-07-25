@@ -136,9 +136,10 @@ M.Store = M.Object.extend(
         }
 
         /* call the data provider's save method and pass id/query, callbacks and some meta information */
-        this.dataProvider.save({
+        this.dataProvider.find({
             id: obj.id,
             query: obj.query,
+            model: this.model,
             opId: this.opId++,
             callbacks: {
                 success: {
@@ -869,17 +870,71 @@ M.Store = M.Object.extend(
         if(this.callbacks && this.callbacks[opId]) {
             var callback = this.callbacks[opId].errorOp;
         }
+
+        if(obj && obj.operationType) {
+            switch(obj.operationType) {
+                case 'find':
+                    break;
+                case 'save':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.error])();
+                    }
+                    break;
+                case 'del':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.error])();
+                    }
+                    break;
+            }
+        }
     },
 
     onErrorTx: function(opId, obj) {
         if(this.callbacks && this.callbacks[opId]) {
             var callback = this.callbacks[opId].errorTx;
         }
+
+        if(obj && obj.operationType) {
+            switch(obj.operationType) {
+                case 'find':
+                    break;
+                case 'save':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.error])();
+                    }
+                    break;
+                case 'del':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.error])();
+                    }
+                    break;
+            }
+        }
     },
 
     onError: function(opId, obj) {
         if(this.callbacks && this.callbacks[opId]) {
             var callback = this.callbacks[opId].error;
+        }
+
+        if(obj && obj.operationType) {
+            switch(obj.operationType) {
+                case 'find':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.error])();
+                    }
+                    break;
+                case 'save':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.error])();
+                    }
+                    break;
+                case 'del':
+                    if(callback && M.EventDispatcher.checkHandler(callback)) {
+                        this.bindToCaller(callback.target, callback.action, [obj.error])();
+                    }
+                    break;
+            }
         }
 
         /* now finally delete the temporarily stored callbacks */
