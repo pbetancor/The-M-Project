@@ -73,6 +73,13 @@ M.ModelAttribute = M.Object.extend(
     refEntity: null,
 
     /**
+     * This property contains the default value of a record.
+     *
+     * @type String|Number|Boolean
+     */
+    defaultValue: null,
+
+    /**
      * Iterates over validators array and calls validate on each validator with the param object passed to the validator.
      * @param {Object} obj The parameter object containing the model id, the record as M.ModelAttribute object and the value of the property.
      * @returns {Boolean} Indicates wheter the property is valid (YES|true) or invalid (NO|false).

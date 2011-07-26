@@ -128,6 +128,14 @@ M.Model = M.Object.extend(
         rec.state = obj.state ? obj.state : M.STATE_NEW;
         delete obj.state;
 
+        /* set default value of attribute if there is one */
+        var that = this;
+        _.each(this.__meta, function(value, key) {
+            if(!rec.data[key] && that.__meta[key].defaultValue) {
+                rec.data[key] = that.__meta[key].defaultValue;
+            }
+        });
+
         /* set timestamps if new */
         if(rec.state === M.STATE_NEW) {
             rec.data[M.Application.getConfig('timeStampCreated')] = +new Date();//M.Date.now().format('yyyy/mm/dd HH:MM:ss');
@@ -264,7 +272,7 @@ M.Model = M.Object.extend(
      * @returns {Object} An M.ModelAttribute object configured with the type and options passed to the function.
      */
     attr: function(type, opts) {
-        return M.ModelAttribute.attr(type, opts); 
+        return M.ModelAttribute.attr(type, opts);
     },
 
     /*
