@@ -31,6 +31,8 @@ M.Store = M.Object.extend(
 
     dataProvider: null,
 
+    dataConsumer: null,
+
     records: null,
 
     callbacks: null,
@@ -44,9 +46,15 @@ M.Store = M.Object.extend(
      * @returns {M.Store} The store.
      */
     create: function(obj) {
+        if(obj.dataProvider && typeof(obj.dataProvider) && obj.dataConsumer && typeof(obj.dataConsumer)) {
+            M.Logger.log('You tried to apply both a data provider and a data consumer to this store. Note, that the data consumer will be ignored.', M.WARN);
+            obj.dataConsumer = null;
+        }
+
         var store = M.Store.extend({
             model: obj.model,
             dataProvider: obj.dataProvider,
+            dataConsumer: obj.dataConsumer,
             records: {},
             callbacks: {}
         });
@@ -103,7 +111,7 @@ M.Store = M.Object.extend(
      */
     find: function(obj) {
         /* check if the store is valid */
-        if(!this.checkStore()) {
+        if(!this.checkStore('find')) {
             return;
         }
 
@@ -129,29 +137,50 @@ M.Store = M.Object.extend(
             }
         /* if neither an id nor a query is passed, log an error and return */
         } else {
-            if(!(obj && obj.query && typeof(obj.query) !== 'object')) {
+            if(this.dataProvider && !(obj && obj.query && typeof(obj.query) !== 'object')) {
                 M.Logger.log('No valid id or query passed when calling find() in store for model ' + this.model.name + '.', M.ERR);
+                return;
+            } else if(this.dataProvider && !(obj && obj.urlParams && typeof(obj.urlParams) !== 'object')) {
+                M.Logger.log('No valid url parameters passed when calling find() in store for model ' + this.model.name + '.', M.ERR);
                 return;
             }
         }
 
-        /* call the data provider's save method and pass id/query, callbacks and some meta information */
-        this.dataProvider.find({
-            id: obj.id,
-            query: obj.query,
-            model: this.model,
-            opId: this.opId++,
-            callbacks: {
-                success: {
-                    target: this,
-                    action: 'onSuccess'
-                },
-                error: {
-                    target: this,
-                    action: 'onError'
+        /* call the data source's save method and pass id/query, callbacks and some meta information */
+        if(this.dataProvider) {
+            this.dataProvider.find({
+                id: obj.id,
+                query: obj.query,
+                model: this.model,
+                opId: this.opId++,
+                callbacks: {
+                    success: {
+                        target: this,
+                        action: 'onSuccess'
+                    },
+                    error: {
+                        target: this,
+                        action: 'onError'
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            this.dataConsumer.find({
+                opId: this.opId++,
+                urlParams: obj.urlParams,
+                model: this.model,
+                callbacks: {
+                    success: {
+                        target: this,
+                        action: 'onSuccess'
+                    },
+                    error: {
+                        target: this,
+                        action: 'onError'
+                    }
+                }
+            });
+        }
     },
 
     /**
@@ -190,7 +219,7 @@ M.Store = M.Object.extend(
      */
     findAll: function(obj) {
         /* check if the store is valid */
-        if(!this.checkStore()) {
+        if(!this.checkStore('findAll')) {
             return;
         }
 
@@ -213,38 +242,55 @@ M.Store = M.Object.extend(
         delete obj.id;
         delete obj.query;
 
-        /* call the data provider's find method and pass the model, callbacks and some meta information */
-        this.dataProvider.find({
-            transactionSize: obj.transactionSize,
-            model: this.model,
-            opId: this.opId++,
-            callbacks: {
-                successOp: {
-                    target: this,
-                    action: 'onSuccessOp'
-                },
-                successTx: {
-                    target: this,
-                    action: 'onSuccessTx'
-                },
-                success: {
-                    target: this,
-                    action: 'onSuccess'
-                },
-                errorOp: {
-                    target: this,
-                    action: 'onErrorOp'
-                },
-                errorTx: {
-                    target: this,
-                    action: 'onErrorTx'
-                },
-                error: {
-                    target: this,
-                    action: 'onError'
+        /* call the data source's find method and pass the model, callbacks and some meta information */
+        if(this.dataProvider) {
+            this.dataProvider.find({
+                transactionSize: obj.transactionSize,
+                model: this.model,
+                opId: this.opId++,
+                callbacks: {
+                    successOp: {
+                        target: this,
+                        action: 'onSuccessOp'
+                    },
+                    successTx: {
+                        target: this,
+                        action: 'onSuccessTx'
+                    },
+                    success: {
+                        target: this,
+                        action: 'onSuccess'
+                    },
+                    errorOp: {
+                        target: this,
+                        action: 'onErrorOp'
+                    },
+                    errorTx: {
+                        target: this,
+                        action: 'onErrorTx'
+                    },
+                    error: {
+                        target: this,
+                        action: 'onError'
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            this.dataConsumer.find({
+                opId: this.opId++,
+                model: this.model,
+                callbacks: {
+                    success: {
+                        target: this,
+                        action: 'onSuccess'
+                    },
+                    error: {
+                        target: this,
+                        action: 'onError'
+                    }
+                }
+            });
+        }
     },
 
     /**
@@ -280,7 +326,7 @@ M.Store = M.Object.extend(
      */
     del: function(obj) {
         /* check if the store is valid */
-        if(!this.checkStore()) {
+        if(!this.checkStore('del')) {
             return;
         }
 
@@ -362,7 +408,7 @@ M.Store = M.Object.extend(
      */
     delBulk: function(obj) {
         /* check if the store is valid */
-        if(!this.checkStore()) {
+        if(!this.checkStore('delBulk')) {
             return;
         }
 
@@ -481,7 +527,7 @@ M.Store = M.Object.extend(
      */
     delAll: function(obj) {
         /* check if the store is valid */
-        if(!this.checkStore()) {
+        if(!this.checkStore('delAll')) {
             return;
         }
 
@@ -534,7 +580,7 @@ M.Store = M.Object.extend(
      */
     save: function(obj) {
         /* check if the store is valid */
-        if(!this.checkStore()) {
+        if(!this.checkStore('save')) {
             return;
         }
         
@@ -616,7 +662,7 @@ M.Store = M.Object.extend(
      */
     saveBulk: function(obj) {
         /* check if the store is valid */
-        if(!this.checkStore()) {
+        if(!this.checkStore('saveBulk')) {
             return;
         }
         
@@ -701,7 +747,7 @@ M.Store = M.Object.extend(
      */
     saveAll: function(obj) {
         /* check if the store is valid */
-        if(!this.checkStore()) {
+        if(!this.checkStore('saveAll')) {
             return;
         }
 
@@ -943,11 +989,40 @@ M.Store = M.Object.extend(
         }
     },
 
-    checkStore: function() {
-        if(!this.dataProvider) {
-            M.Logger.log('No data provider specified for this store.', M.ERR);
+    checkStore: function(calledMethod) {
+        switch(calledMethod) {
+            case 'find':
+            case 'findAll':
+                if(!this.dataProvider && !this.dataConsumer) {
+                    M.Logger.log('Unable to call find/findAll, since there is no data provider or data consumer specified for this store.', M.ERR);
+                    return NO;
+                }
+                break;
+            case 'save':
+            case 'saveAll':
+            case 'saveBulk':
+                if(!this.dataProvider) {
+                    M.Logger.log('Unable to call save/saveAll, since there is no data provider specified for this store.', M.ERR);
+                    return NO;
+                }
+                break;
+            case 'del':
+            case 'delAll':
+            case 'delBulk':
+                if(!this.dataProvider) {
+                    M.Logger.log('Unable to call del/delAll, since there is no data provider specified for this store.', M.ERR);
+                    return NO;
+                }
+                break;
+            default:
+                return NO;
+                break;
+        }
+
+        if(!calledMethod) {
             return NO;
         }
+
         return YES;
     }
 
