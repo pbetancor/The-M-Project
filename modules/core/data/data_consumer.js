@@ -106,7 +106,7 @@ M.DataConsumer = M.Object.extend(
                         /* call callback */
                         that.handleCallback(obj.callbacks, 'success', [obj.opId, {
                             operationType: 'find',
-                            records: records
+                            records: []
                         }]);
                     }
                 } else {
@@ -116,7 +116,7 @@ M.DataConsumer = M.Object.extend(
                     /* call callback */
                     that.handleCallback(obj.callbacks, 'success', [obj.opId, {
                         operationType: 'find',
-                        records: records
+                        records: []
                     }]);
                 }
             },
