@@ -16,6 +16,8 @@ m_require('core/utility/logger.js');
  * A data consumer can be called a read-only data provider. It's only job is it to retrieve some data form
  * remote services, e.g. a webservice, and to push them into the store.
  *
+ * Note: So far we only support data in JSON format!
+ *
  * @extends M.Object
  */
 M.DataConsumer = M.Object.extend(
@@ -70,14 +72,17 @@ M.DataConsumer = M.Object.extend(
             url: this.bindToCaller(this, this.url, _.toArray(obj.urlParams))(),
             isJSON: YES,
             beforeSend: function(request) {
-                //...
+                /* is there anything to do for us? otherwise kick this callback! */
             },
             onSuccess: function(data, message, request){
                 /* if no data was returned, skip this */
                 if(data) {
                     /* apply response path */
                     if(that.responsePath) {
-                     data = data[that.responsePath];
+                        var responsePath = that.responsePath.split('.');
+                        _.each(responsePath, function(subPath) {
+                            data = data[subPath];
+                        });
                     }
 
                     /* if no data was found inside responsePath, skip */
