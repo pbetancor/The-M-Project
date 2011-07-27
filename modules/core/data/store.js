@@ -69,9 +69,16 @@ M.Store = M.Object.extend(
         return record;
     },
 
-    // add to store (nix mit DP)
+    /**
+     * This method adds a single record to the store's records array. Additionally it triggers an event,
+     * that the records array of this store did change. This is important for content binding stuff, so the
+     * view's get informed that something happened.
+     *
+     * @param {M.Model} record The record to be added to the records array.
+     */
     addRecord: function(record) {
         this.records[record.m_id] = record;
+
         // trigger event #RECORDS_DID_CHANGE#
         // konfigurierbard über 2. parameter fireEvent: event nur einmal feuern bei bulkimport (find)
     },
@@ -827,6 +834,18 @@ M.Store = M.Object.extend(
         if(obj && obj.operationType) {
             switch(obj.operationType) {
                 case 'find':
+                    if(!this.callbacks[opId].appendRecords) {
+                        this.records = {};
+                    }
+                    if(obj.records) {
+                        if(!_.isArray(obj.records)) {
+                            obj.records = [obj.records];
+                        }
+                        var that = this;
+                        _.each(obj.records, function(record) {
+                            that.addRecord(record);
+                        });
+                    }
                     if(callback && M.EventDispatcher.checkHandler(callback)) {
                         this.bindToCaller(callback.target, callback.action, [obj.records, obj.txCount, obj.txTotal])();
                     }
@@ -861,10 +880,11 @@ M.Store = M.Object.extend(
                         if(!_.isArray(obj.records)) {
                             obj.records = [obj.records];
                         }
-                        var that = this;
-                        _.each(obj.records, function(record) {
-                            that.addRecord(record);
-                        });
+
+                        /* only add the record to the records array if it is one single record. otherwise is was already added in the tx callback. */
+                        if(obj.records.length === 1) {
+                            this.addRecord(obj.records[0]);
+                        }
                     }
                     if(callback && M.EventDispatcher.checkHandler(callback)) {
                         this.bindToCaller(callback.target, callback.action, [obj.records])();
