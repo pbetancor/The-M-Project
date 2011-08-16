@@ -82,3 +82,67 @@
 .tmp-actionsheet-destructive-button:active {
     background-image: -webkit-gradient(linear, left bottom, left top, color-stop(0.05, rgb(235, 104, 87)), color-stop(1.0, rgb(245, 46, 19)));
 }
+
+
+
+/* DASHBOARD */
+.tmp-dashboard-line {
+    margin-top: 20px;
+}
+
+.tmp-dashboard-line:first-child {
+    margin-top: 0px;
+}
+
+.tmp-dashboard-item {
+    float: left;
+}
+
+.tmp-dashboard-item img {
+    max-width: 100%;
+    -webkit-touch-callout: none;
+}
+
+.tmp-dashboard-item, .tmp-dashboard-item-label {
+    text-align: center;
+}
+
+.tmp-dashboard-item-label {
+    font-size: 0.8em;
+    white-space: nowrap;
+	width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tmp-dashboard-line-clear {
+    clear: left;
+}
+
+@-webkit-keyframes rotate {
+    0% {
+        -webkit-transform: rotate(0deg);
+    }
+    25% {
+        -webkit-transform: rotate(5deg);
+    }
+    50% {
+        -webkit-transform: rotate(0deg);
+    }
+    75% {
+        -webkit-transform: rotate(-5deg);
+    }
+    100% {
+        -webkit-transform: rotate(0deg);
+    }
+}
+
+.rotate1 {
+    -webkit-animation:
+        rotate 0.3s linear infinite
+}
+
+.rotate2 {
+    -webkit-animation:
+        rotate 0.4s linear infinite
+}
