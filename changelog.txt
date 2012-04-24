@@ -1,4 +1,4 @@
-** Version 1.1 - Date 17.04.2012 **
+** Version 1.1 - Date 20.04.2012 **
 
   * Fixed Issue #30: Changed button() to buttonMarkup() to render dynamically added buttons correctly
   * Fixed isAsync and isJSON flags in M.Request
@@ -23,6 +23,7 @@
   * Fixed an issue with possibly undefined variable in M.FormView
   * Updated D8 library to 0.2.0
   * Updated Underscore to v1.3.2
+  * Added parameterized M.I18N
   * Fixed a bug with regex check for valuePattern in M.ListView
   * Improved behaviour and stability of dialogs
   * Adjusted look and feel of date picker to fit into jqm design
@@ -30,6 +31,8 @@
   * Implemented real fixed toolbars/tab bars of jqm 1.1
   * Adjusted M.SliderView to make use of jqm's 'highlight' option
   * Fixed a bug with M.ListView (rendering of sub views is now possible)
+  * Fixed a bug with M.ScrollView
+  * Upgraded split view to work with JQM 1.1
 
 ** Version 1.0 - Date 25.01.2012 **
 
