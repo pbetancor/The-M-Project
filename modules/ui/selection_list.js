@@ -409,7 +409,7 @@ M.SelectionListView = M.View.extend(
             } else if(this.selectionMode === M.SINGLE_SELECTION_DIALOG && !this.selection) {
                 var that = this;
                 var item = M.ViewManager.getViewById($('#' + this.id).find('option:first-child').attr('id'));
-                that.setSelection(item.value);
+                item !== undefined && item !== null ? that.setSelection(item.value) : null;
             }
         } else if(this.selectionMode !== M.SINGLE_SELECTION_DIALOG && this.selectionMode !== M.MULTIPLE_SELECTION_DIALOG) {
             $('#' + this.id).controlgroup();
@@ -500,6 +500,9 @@ M.SelectionListView = M.View.extend(
                 M.EventDispatcher.callHandler(nextEvent, event, NO, [selectionValues, this.selection]);
             }
         }
+
+        /* fix the toolbar(s) again */
+        $('#' + this.id).blur();
     },
 
     /**
