@@ -13,8 +13,10 @@ m_require('core/datastore/remote_storage.js');
  * Extended version of DataProviderRemoteStorage with new features:
  *   - Paginated find(). Perform a paginated search if 'obj.firstResult' and 'obj.maxNumberResults' are defined in the object argument.
  *   - The paginated search url must be provided in function config.read.url.paginated(firstResult, maxNumberResults).
+ *   - Optionally 'obj.filter' could be provided in function config.read.url.paginated(firstResult, maxNumberResults, filter).
  *   - Remote query beforeSend configuration. It can be provided in function config.beforeSend().
  *   - Count function.
+ *   - Optionally the filter count url must be provided in function config.count.url.filter(filter).
  *
  * @extends DataProviderRemoteStorage
  */
@@ -31,7 +33,7 @@ M.DataProviderRemoteStoragePaginated = M.DataProviderRemoteStorage.extend(
         if (obj.ID)
         	readUrl = config.read.url.one(obj.ID);
         else if (obj.firstResult != null && obj.maxNumberResults != null)
-        	readUrl = config.read.url.paginated(obj.firstResult, obj.maxNumberResults);
+        	readUrl = config.read.url.paginated(obj.firstResult, obj.maxNumberResults, obj.filter);
         else
         	readUrl = config.read.url.all();
         
@@ -44,7 +46,14 @@ M.DataProviderRemoteStoragePaginated = M.DataProviderRemoteStorage.extend(
     count: function(obj) {
     	var config = this.config[obj.model.name];
 
-         var countUrl = config.url + config.count.url;
+        var countUrl = null;
+        
+        if (obj.filter != null)
+        	countUrl = config.count.url.filter(obj.filter);
+        else
+        	countUrl = config.count.url.all();
+        
+        countUrl = config.url + countUrl;
 
         this.remoteQuery('count', countUrl, config.count.httpMethod, null, obj);
 	},
